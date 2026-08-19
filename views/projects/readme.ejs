@@ -1,0 +1,290 @@
+<input type="hidden" id="projectIdHolder" value="<%= project.id %>">
+<input type="hidden" id="initialSelectedFile" value="<%= selectedFile ? selectedFile.relativePath : '' %>">
+
+<div class="page-header">
+  <div class="page-title-group">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <h1>Documentação &bull; <%= project.name %></h1>
+      <span class="status-pill status-<%= project.status %>">
+        <span class="status-dot"></span>
+        <span class="status-text"><%= project.status %></span>
+      </span>
+      <span class="badge-autosync" style="background: <%= project.projectType === 'PYTHON' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)' %>; border-color: <%= project.projectType === 'PYTHON' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(16, 185, 129, 0.4)' %>; color: <%= project.projectType === 'PYTHON' ? '#93c5fd' : '#34d399' %>;">
+        <%= project.projectType === 'PYTHON' ? '🐍 Python' : (project.projectType === 'GENERIC' ? '⚙️ Custom' : '🟢 Node.js') %>
+      </span>
+      <% if (readmes && readmes.length > 0) { %>
+        <span class="badge-readme-count">
+          📖 <%= readmes.length %> <%= readmes.length === 1 ? 'README detectado' : 'READMEs detectados' %>
+        </span>
+      <% } %>
+    </div>
+    <p style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+      <%= project.repoUrl %> &bull; branch: <strong><%= project.branch %></strong>
+      <% if (project.currentCommitHash) { %>
+        &bull; versão: <code class="badge-commit">#<%= project.currentCommitHash.slice(0, 7) %></code>
+      <% } %>
+    </p>
+  </div>
+
+  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+    <a href="/projects/<%= project.id %>/terminal" class="btn btn-primary btn-sm">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+      Terminal / Logs
+    </a>
+    <% if (currentUser && currentUser.role === 'ADMIN') { %>
+      <a href="/projects/<%= project.id %>/edit" class="btn btn-secondary btn-sm">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+        Configurações
+      </a>
+    <% } %>
+    <a href="/projects" class="btn btn-secondary btn-sm">Voltar</a>
+  </div>
+</div>
+
+<% if (!readmes || readmes.length === 0) { %>
+  <!-- Estado Vazio: Nenhum README encontrado -->
+  <div class="card win-explorer-window">
+    <div class="win-explorer-titlebar">
+      <div class="win-title-controls">
+        <span class="win-circle close"></span>
+        <span class="win-circle min"></span>
+        <span class="win-circle max"></span>
+      </div>
+      <div class="win-titlebar-text">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="color: #00f0ff; margin-right: 6px;"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>
+        Gerenciador de Documentação - <%= project.name %>
+      </div>
+    </div>
+
+    <div class="card-body" style="text-align: center; padding: 60px 24px;">
+      <div class="empty-folder-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.4; color: var(--accent-cyan);">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          <line x1="9" y1="14" x2="15" y2="14"></line>
+        </svg>
+      </div>
+      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Nenhum arquivo README detectado</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 520px; margin: 0 auto 24px;">
+        <% if (readmeError) { %>
+          <%= readmeError %>
+        <% } else { %>
+          Este repositório ainda não possui um arquivo <code>README.md</code> ou o projeto ainda não foi clonado no servidor.
+        <% } %>
+      </p>
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <a href="/projects/<%= project.id %>/terminal" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 12 8 16"></polyline></svg>
+          Executar Deploy / Sincronizar Repositório
+        </a>
+        <a href="/projects" class="btn btn-secondary">Voltar para Projetos</a>
+      </div>
+    </div>
+  </div>
+<% } else { %>
+
+  <!-- Janela Principal: Gerenciador de Arquivos do Windows + Leitor Interpretado -->
+  <div class="win-explorer-window">
+    <!-- Barra de Título Estilo Windows Fluent -->
+    <div class="win-explorer-titlebar">
+      <div class="win-title-controls">
+        <span class="win-circle close" title="Fechar"></span>
+        <span class="win-circle min" title="Minimizar"></span>
+        <span class="win-circle max" title="Maximizar"></span>
+      </div>
+      <div class="win-titlebar-text">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="color: #00f0ff; margin-right: 6px;"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>
+        Gerenciador de Arquivos Sentinela &bull; <%= project.name %> &bull; Explorador de Documentação
+      </div>
+    </div>
+
+    <!-- Barra de Navegação e Breadcrumb estilo Windows Explorer -->
+    <div class="win-explorer-toolbar">
+      <div class="win-nav-buttons">
+        <button type="button" class="win-toolbar-btn" id="winNavBack" title="Voltar" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <button type="button" class="win-toolbar-btn" id="winNavForward" title="Avançar" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <button type="button" class="win-toolbar-btn" id="winNavRefresh" title="Atualizar Lista">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        </button>
+      </div>
+
+      <!-- Barra de Endereço / Breadcrumbs -->
+      <div class="win-address-bar">
+        <div class="win-address-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        </div>
+        <div class="win-breadcrumbs" id="winBreadcrumbs">
+          <span class="crumb-root">Este Servidor</span>
+          <span class="crumb-sep">&gt;</span>
+          <span class="crumb-item">Projetos</span>
+          <span class="crumb-sep">&gt;</span>
+          <span class="crumb-item"><%= project.name %></span>
+          <span class="crumb-sep">&gt;</span>
+          <span class="crumb-active" id="activeCrumbFile"><%= selectedFile ? selectedFile.relativePath : 'README.md' %></span>
+        </div>
+      </div>
+
+      <!-- Caixa de Busca / Filtro Rápido -->
+      <div class="win-search-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="readmeSearchInput" placeholder="Filtrar arquivos..." autocomplete="off">
+        <button type="button" id="clearSearchBtn" class="clear-search-btn" style="display: none;">&times;</button>
+      </div>
+    </div>
+
+    <!-- Seção 1: Listagem Estilo Gerenciador de Arquivos do Windows (Tabela de Detalhes) -->
+    <div class="win-filelist-section">
+      <div class="win-section-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.05em;">Arquivos de Documentação Identificados no Projeto</span>
+        </div>
+        <span class="win-file-count-badge" id="fileCountBadge">
+          <%= readmes.length %> <%= readmes.length === 1 ? 'item' : 'itens' %>
+        </span>
+      </div>
+
+      <div class="win-table-container">
+        <table class="win-explorer-table" id="readmeExplorerTable">
+          <thead>
+            <tr>
+              <th style="width: 32%;">Nome</th>
+              <th style="width: 25%;">Pasta / Localização</th>
+              <th style="width: 18%;">Data de Modificação</th>
+              <th style="width: 15%;">Tipo</th>
+              <th style="width: 10%; text-align: right;">Tamanho</th>
+            </tr>
+          </thead>
+          <tbody id="readmeFilesTableBody">
+            <% readmes.forEach(function(item) { %>
+              <tr class="win-file-row <%= (selectedFile && selectedFile.relativePath === item.relativePath) ? 'active-row' : '' %>"
+                  data-relative-path="<%= item.relativePath %>"
+                  data-name="<%= item.name %>"
+                  data-directory="<%= item.directory %>"
+                  data-size="<%= item.sizeFormatted %>"
+                  data-date="<%= item.modifiedAtFormatted %>"
+                  data-type="<%= item.fileType %>"
+                  title="Clique para abrir e ler <%= item.relativePath %>">
+                <td>
+                  <div class="win-file-name-cell">
+                    <span class="win-file-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    </span>
+                    <div style="min-width: 0;">
+                      <span class="win-file-name-text"><%= item.name %></span>
+                      <% if (item.isRoot) { %>
+                        <span class="badge-root-tag">Principal (Raiz)</span>
+                      <% } %>
+                    </div>
+                  </div>
+                </td>
+                <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">
+                  <div class="win-folder-cell">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    <span><%= item.directory %></span>
+                  </div>
+                </td>
+                <td style="font-size: 0.8rem; color: var(--text-dim);"><%= item.modifiedAtFormatted %></td>
+                <td style="font-size: 0.8rem; color: var(--text-muted);"><%= item.fileType %></td>
+                <td style="font-family: var(--font-mono); font-size: 0.8rem; text-align: right; color: var(--accent-cyan);"><%= item.sizeFormatted %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+        <div id="noMatchMessage" style="display: none; padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+          Nenhum arquivo README corresponde à pesquisa digitada.
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção 2: Visualizador / Leitor Interpretado de Markdown -->
+    <div class="win-reader-section">
+      <!-- Barra de Controle do Documento -->
+      <div class="reader-header-bar">
+        <div class="reader-doc-meta">
+          <div class="reader-doc-title">
+            <span class="reader-md-badge">MD</span>
+            <span id="readerCurrentFileName"><%= selectedFile ? selectedFile.name : 'README.md' %></span>
+            <span class="reader-path-badge" id="readerCurrentPath"><%= selectedFile ? selectedFile.relativePath : '' %></span>
+          </div>
+
+          <div class="reader-stats-pills">
+            <span class="pill-stat" id="statReadingTime">⏱️ ~<%= stats.readingTimeMinutes || 1 %> min de leitura</span>
+            <span class="pill-stat" id="statWordCount">📝 <%= stats.wordCount || 0 %> palavras</span>
+            <span class="pill-stat" id="statLineCount">📏 <%= stats.lineCount || 0 %> linhas</span>
+            <span class="pill-stat" id="statFileSize">💾 <%= selectedFile ? selectedFile.sizeFormatted : '' %></span>
+          </div>
+        </div>
+
+        <div class="reader-actions-toolbar">
+          <div class="view-mode-toggle">
+            <button type="button" class="btn-toggle active" id="btnViewRendered" title="Exibir Markdown formatado e interpretado">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              Interpretado
+            </button>
+            <button type="button" class="btn-toggle" id="btnViewRaw" title="Exibir código fonte bruto do Markdown">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              Código Fonte
+            </button>
+          </div>
+
+          <button type="button" class="btn btn-secondary btn-sm" id="btnCopyReadme" title="Copiar conteúdo do Markdown">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span id="copyReadmeText">Copiar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Sumário Rápido / Table of Contents (se houver títulos) -->
+      <% if (headings && headings.length > 0) { %>
+        <div class="reader-toc-bar" id="readerTocBar">
+          <div class="toc-label">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            Sumário:
+          </div>
+          <div class="toc-pills" id="tocPillsContainer">
+            <% headings.slice(0, 8).forEach(function(h) { %>
+              <a href="#<%= h.id %>" class="toc-pill <%= h.level === 1 ? 'h1-pill' : (h.level === 2 ? 'h2-pill' : 'h3-pill') %>" title="<%= h.text %>">
+                <%= h.text %>
+              </a>
+            <% }); %>
+            <% if (headings.length > 8) { %>
+              <span class="toc-more-pill">+<%= headings.length - 8 %> seções</span>
+            <% } %>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="reader-toc-bar" id="readerTocBar" style="display: none;">
+          <div class="toc-label">Sumário:</div>
+          <div class="toc-pills" id="tocPillsContainer"></div>
+        </div>
+      <% } %>
+
+      <!-- Área de Visualização do Documento -->
+      <div class="reader-body-container">
+        <!-- Visualização 1: Markdown Interpretado (Renderizado com Estilos Ricos) -->
+        <div class="markdown-rendered-view" id="markdownRenderedView">
+          <%- htmlContent %>
+        </div>
+
+        <!-- Visualização 2: Código Fonte Bruto (Markdown Raw) -->
+        <div class="markdown-raw-view" id="markdownRawView" style="display: none;">
+          <pre id="rawContentPre"><code><%= rawContent %></code></pre>
+        </div>
+
+        <!-- Spinner de Carregamento Assíncrono -->
+        <div class="reader-loading-overlay" id="readerLoadingOverlay" style="display: none;">
+          <div class="deploy-spinner"></div>
+          <span style="font-size: 0.9rem; color: var(--accent-cyan); margin-top: 12px;">Carregando documento...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<% } %>
+
+<!-- Script Dedicado ao Leitor de READMEs -->
+<script src="/js/readme-view.js"></script>

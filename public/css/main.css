@@ -1323,3 +1323,723 @@ textarea.form-control {
   }
 }
 
+/* ==========================================================================
+   LEITOR DE README & GERENCIADOR DE ARQUIVOS ESTILO WINDOWS EXPLORER
+   ========================================================================== */
+
+/* Badge de README */
+.badge-readme-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  color: var(--accent-cyan);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Janela do Windows Explorer */
+.win-explorer-window {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 32px;
+}
+
+/* Barra de Título */
+.win-explorer-titlebar {
+  background: #090e17;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  user-select: none;
+}
+
+.win-title-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.win-circle {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.win-circle.close { background-color: #ef4444; }
+.win-circle.min { background-color: #f59e0b; }
+.win-circle.max { background-color: #10b981; }
+
+.win-titlebar-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  display: flex;
+  align-items: center;
+}
+
+/* Barra de Ferramentas / Navegação do Windows Explorer */
+.win-explorer-toolbar {
+  background: #0d1525;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+
+.win-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.win-toolbar-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.win-toolbar-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.win-toolbar-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Barra de Endereço / Breadcrumbs */
+.win-address-bar {
+  flex: 1;
+  min-width: 260px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  overflow: hidden;
+}
+
+.win-address-icon {
+  color: var(--accent-cyan);
+  display: flex;
+  align-items: center;
+}
+
+.win-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.win-breadcrumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.crumb-sep {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+.crumb-item {
+  color: var(--text-muted);
+}
+
+.crumb-active {
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+/* Caixa de Busca */
+.win-search-box {
+  position: relative;
+  width: 220px;
+  display: flex;
+  align-items: center;
+}
+
+.win-search-box svg {
+  position: absolute;
+  left: 10px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.win-search-box input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 6px 30px 6px 30px;
+  font-size: 0.8rem;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.win-search-box input:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.clear-search-btn:hover {
+  color: var(--text-main);
+}
+
+/* Seção de Listagem de Arquivos (Modo Detalhes) */
+.win-filelist-section {
+  background: #0b111e;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.win-section-header {
+  padding: 12px 18px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.win-file-count-badge {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.win-table-container {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.win-explorer-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.win-explorer-table th {
+  background: #080d16;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.win-file-row {
+  cursor: pointer;
+  transition: all 0.12s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.win-file-row:hover {
+  background: rgba(0, 240, 255, 0.06);
+}
+
+.win-file-row.active-row {
+  background: rgba(0, 240, 255, 0.14) !important;
+  border-left: 3px solid var(--accent-cyan);
+}
+
+.win-file-row td {
+  padding: 10px 16px;
+  vertical-align: middle;
+}
+
+.win-file-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.win-file-icon {
+  color: var(--accent-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.win-file-name-text {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-main);
+}
+
+.badge-root-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+.win-folder-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Seção de Leitura e Renderização Markdown */
+.win-reader-section {
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.reader-header-bar {
+  padding: 16px 24px;
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.reader-doc-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reader-doc-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.reader-md-badge {
+  background: var(--accent-blue);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.reader-path-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.reader-stats-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pill-stat {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-subtle);
+}
+
+.reader-actions-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-mode-toggle {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.btn-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-toggle:hover {
+  color: var(--text-main);
+}
+
+.btn-toggle.active {
+  background: var(--bg-surface-elevated);
+  color: var(--accent-cyan);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Barra de Sumário Rápido (TOC) */
+.reader-toc-bar {
+  padding: 10px 24px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.toc-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.toc-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.toc-pill {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toc-pill:hover {
+  background: rgba(0, 240, 255, 0.1);
+  border-color: rgba(0, 240, 255, 0.3);
+  color: var(--accent-cyan);
+}
+
+.toc-more-pill {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  padding: 3px 8px;
+}
+
+/* Container do Corpo do Documento */
+.reader-body-container {
+  position: relative;
+  padding: 32px 36px;
+  min-height: 400px;
+  max-height: 800px;
+  overflow-y: auto;
+}
+
+.reader-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+/* ==========================================================================
+   TIPOGRAFIA RICA PARA O MARKDOWN INTERPRETADO (.markdown-rendered-view)
+   ========================================================================== */
+
+.markdown-rendered-view {
+  color: #e2e8f0;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  word-wrap: break-word;
+}
+
+.markdown-rendered-view > *:first-child {
+  margin-top: 0 !important;
+}
+
+/* Títulos */
+.markdown-rendered-view h1,
+.markdown-rendered-view h2,
+.markdown-rendered-view h3,
+.markdown-rendered-view h4,
+.markdown-rendered-view h5,
+.markdown-rendered-view h6 {
+  color: #f8fafc;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 28px;
+  margin-bottom: 14px;
+  position: relative;
+}
+
+.markdown-rendered-view h1 {
+  font-size: 1.85rem;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.markdown-rendered-view h1::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: var(--accent-cyan);
+}
+
+.markdown-rendered-view h2 {
+  font-size: 1.45rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.markdown-rendered-view h3 {
+  font-size: 1.2rem;
+  color: #93c5fd;
+}
+
+.markdown-rendered-view h4 {
+  font-size: 1.05rem;
+}
+
+/* Parágrafos e Espaçamento */
+.markdown-rendered-view p {
+  margin-bottom: 16px;
+}
+
+/* Links */
+.markdown-rendered-view a {
+  color: var(--accent-cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease;
+}
+
+.markdown-rendered-view a:hover {
+  color: #67e8f9;
+}
+
+/* Listas */
+.markdown-rendered-view ul,
+.markdown-rendered-view ol {
+  margin-bottom: 18px;
+  padding-left: 26px;
+}
+
+.markdown-rendered-view li {
+  margin-bottom: 6px;
+}
+
+.markdown-rendered-view li > ul,
+.markdown-rendered-view li > ol {
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+/* Checklists / Task lists do GitHub */
+.markdown-rendered-view ul:has(input[type="checkbox"]) {
+  list-style: none;
+  padding-left: 4px;
+}
+
+.markdown-rendered-view input[type="checkbox"] {
+  accent-color: var(--accent-cyan);
+  margin-right: 8px;
+  transform: scale(1.1);
+  vertical-align: middle;
+}
+
+/* Blocos de Código Pré-formatados */
+.markdown-rendered-view pre,
+.markdown-raw-view pre {
+  background: #070b12 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin: 20px 0;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.markdown-rendered-view pre code,
+.markdown-raw-view pre code {
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  color: #e2e8f0;
+  font-family: var(--font-mono);
+}
+
+/* Código Inline */
+.markdown-rendered-view code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: rgba(0, 240, 255, 0.08);
+  color: #67e8f9;
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Citações / Blockquotes */
+.markdown-rendered-view blockquote {
+  border-left: 4px solid var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.04);
+  padding: 12px 18px;
+  margin: 18px 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+.markdown-rendered-view blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Tabelas */
+.markdown-rendered-view table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 22px 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.markdown-rendered-view th,
+.markdown-rendered-view td {
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.88rem;
+}
+
+.markdown-rendered-view th {
+  background: #111a2d;
+  color: #f8fafc;
+  font-weight: 700;
+  text-align: left;
+}
+
+.markdown-rendered-view tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.markdown-rendered-view tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Linha Horizontal (HR) */
+.markdown-rendered-view hr {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  border: none;
+  margin: 28px 0;
+}
+
+/* Imagens */
+.markdown-rendered-view img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  margin: 12px 0;
+  display: inline-block;
+}
+
+/* Badges e Shields (ex: Travis, npm, shields.io) */
+.markdown-rendered-view p img,
+.markdown-rendered-view a img {
+  vertical-align: middle;
+  border: none;
+  margin: 2px 3px;
+  display: inline-block;
+}
+
+

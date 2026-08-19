@@ -1,6 +1,7 @@
 const { Project, DeploymentLog } = require('../models');
 const processManager = require('../services/processManager');
 const gitService = require('../services/gitService');
+const readmeService = require('../services/readmeService');
 const { getPrimaryLocalIp } = require('../config/network');
 
 /**
@@ -20,13 +21,16 @@ exports.showTerminal = async (req, res) => {
     const logs = processManager.getLogs(project.id);
     const primaryIp = getPrimaryLocalIp();
     const commits = await gitService.getCommitHistory(project.slug, 15);
+    const readmes = readmeService.findProjectReadmes(project.slug);
 
     res.render('projects/terminal', {
       title: `Terminal: ${project.name} - Servidor Sentinela`,
       project,
       initialLogs: logs,
       primaryIp,
-      commits
+      commits,
+      hasReadme: readmes.length > 0,
+      readmeCount: readmes.length
     });
   } catch (error) {
     console.error('[Terminal] Erro ao carregar terminal:', error);
@@ -34,6 +38,7 @@ exports.showTerminal = async (req, res) => {
     res.redirect('/projects');
   }
 };
+
 
 /**
  * Inicia a execução do projeto

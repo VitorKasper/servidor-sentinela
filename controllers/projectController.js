@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { Project, DeploymentLog } = require('../models');
 const gitService = require('../services/gitService');
+const readmeService = require('../services/readmeService');
 const processManager = require('../services/processManager');
 
 /**
@@ -26,9 +27,17 @@ exports.index = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
 
+    const enrichedProjects = projects.map(proj => {
+      const projObj = proj.toJSON ? proj.toJSON() : { ...proj };
+      const readmes = readmeService.findProjectReadmes(projObj.slug);
+      projObj.readmeCount = readmes.length;
+      projObj.hasReadme = readmes.length > 0;
+      return projObj;
+    });
+
     res.render('projects/index', {
       title: 'Projetos - Servidor Sentinela',
-      projects
+      projects: enrichedProjects
     });
   } catch (error) {
     console.error('[Projects] Erro ao listar projetos:', error);
@@ -36,6 +45,7 @@ exports.index = async (req, res) => {
     res.redirect('/dashboard');
   }
 };
+
 
 /**
  * Exibe o formulário de cadastro de novo projeto (Admin)
