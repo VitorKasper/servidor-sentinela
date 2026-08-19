@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "servidor-sentinela",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
+      "port": 3275
+    }
+  ]
+}

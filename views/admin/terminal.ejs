@@ -1,0 +1,70 @@
+<input type="hidden" id="terminalDefaultCwd" value="<%= defaultCwd %>">
+
+<div class="page-header">
+  <div class="page-title-group">
+    <h1>Terminal do Servidor</h1>
+    <p style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+      Shell persistente do host &bull; diretório inicial: <code><%= defaultCwd %></code>
+    </p>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 20px; border: 1px solid rgba(248, 113, 113, 0.35); background: rgba(248, 113, 113, 0.06);">
+  <div class="card-body" style="padding: 14px 20px; display: flex; align-items: flex-start; gap: 12px;">
+    <span style="font-size: 1.2rem;">⚠️</span>
+    <div style="font-size: 0.85rem; color: var(--text-main); line-height: 1.5;">
+      <strong>Acesso de alto risco.</strong> Os comandos digitados aqui são executados diretamente no sistema operacional do servidor,
+      com os mesmos privilégios do processo do Sentinela. Não há sandbox nem confirmação adicional. Use com cautela
+      (ex: <code>cd</code>, <code>git reset --hard</code>, <code>rmdir</code>, <code>npm install</code>).
+      O shell é persistente: comandos <code>cd</code> alteram o diretório para os comandos seguintes.
+    </div>
+  </div>
+</div>
+
+<div class="terminal-grid-layout" style="display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start;">
+  <div class="terminal-wrapper">
+    <div class="terminal-header">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div class="terminal-controls-dots">
+          <div class="term-dot red"></div>
+          <div class="term-dot yellow"></div>
+          <div class="term-dot green"></div>
+        </div>
+        <div class="terminal-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          sentinela-shell ~ host
+        </div>
+        <span id="terminalStatusBadge" class="badge-autosync" style="background: rgba(148, 163, 184, 0.15); border-color: rgba(148, 163, 184, 0.4); color: #cbd5e1;">
+          conectando...
+        </span>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button type="button" id="btnClearTerminal" class="btn btn-secondary btn-sm" style="background: rgba(255, 255, 255, 0.05); font-size: 0.75rem;">
+          Limpar Tela
+        </button>
+        <button type="button" id="btnKillShell" class="btn btn-danger btn-sm" style="font-size: 0.75rem;" title="Encerra o shell atual e abre um novo (use se um comando travar)">
+          Reiniciar Shell
+        </button>
+      </div>
+    </div>
+
+    <div class="terminal-screen" id="terminalScreen">
+      <div class="terminal-line system">[Sentinela] Conectando ao shell administrativo do host...</div>
+    </div>
+
+    <form id="terminalForm" style="display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: #0b1120;">
+      <textarea
+        id="terminalInput"
+        rows="4"
+        placeholder="Digite um ou mais comandos, um por linha. Ex:&#10;cd C:\Users\gaspar\projetos\servidor-sentinela\storage\projects\encerra-viagens-grupos&#10;git reset --hard HEAD&#10;git pull&#10;npm install"
+        style="flex: 1; resize: vertical; font-family: var(--font-mono); font-size: 0.85rem; background: #050811; color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--radius-md); padding: 10px 12px;"
+      ></textarea>
+      <button type="submit" id="btnRunCommand" class="btn btn-primary" style="align-self: flex-end;">
+        ▶ Executar
+      </button>
+    </form>
+  </div>
+</div>
+
+<script src="/js/admin-terminal-view.js"></script>

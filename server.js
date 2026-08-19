@@ -21,6 +21,7 @@ const processRoutes = require('./routes/processRoutes');
 const userRoutes = require('./routes/userRoutes');
 const portRoutes = require('./routes/portRoutes');
 const settingRoutes = require('./routes/settingRoutes');
+const terminalRoutes = require('./routes/terminalRoutes');
 const settingService = require('./services/settingService');
 
 const app = express();
@@ -86,6 +87,7 @@ app.use('/dashboard', dashboardRoutes);
 app.use('/projects', projectRoutes);
 app.use('/projects', processRoutes);
 app.use('/users', userRoutes);
+app.use('/terminal', terminalRoutes);
 app.use('/', portRoutes);
 app.use('/', settingRoutes);
 
