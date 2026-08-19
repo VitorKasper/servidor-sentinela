@@ -1,5 +1,6 @@
 const { Project, DeploymentLog } = require('../models');
 const processManager = require('../services/processManager');
+const gitService = require('../services/gitService');
 const { getPrimaryLocalIp } = require('../config/network');
 
 /**
@@ -18,12 +19,14 @@ exports.showTerminal = async (req, res) => {
 
     const logs = processManager.getLogs(project.id);
     const primaryIp = getPrimaryLocalIp();
+    const commits = await gitService.getCommitHistory(project.slug, 15);
 
     res.render('projects/terminal', {
       title: `Terminal: ${project.name} - Servidor Sentinela`,
       project,
       initialLogs: logs,
-      primaryIp
+      primaryIp,
+      commits
     });
   } catch (error) {
     console.error('[Terminal] Erro ao carregar terminal:', error);
@@ -93,6 +96,61 @@ exports.redeploy = async (req, res) => {
     return res.json({ success: true, message: 'Processo de re-deploy iniciado com sucesso. Acompanhe pelo terminal.' });
   } catch (error) {
     console.error('[Process] Erro ao disparar re-deploy:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * Retorna a lista de commits do repositório Git
+ */
+exports.getCommits = async (req, res) => {
+  try {
+    const project = await Project.findByPk(req.params.id);
+    if (!project) return res.status(404).json({ success: false, error: 'Projeto não encontrado' });
+
+    const commits = await gitService.getCommitHistory(project.slug, 15);
+    return res.json({ success: true, commits, currentCommit: project.currentCommitHash });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * Executa o rollback para um commit anterior
+ */
+exports.rollback = async (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id, 10);
+    const commitHash = req.params.commitHash || req.body.commitHash;
+    if (!commitHash) return res.status(400).json({ success: false, error: 'Hash de commit obrigatório' });
+
+    const io = req.app.get('io');
+    processManager.rollbackProject(projectId, commitHash, io).catch((err) => {
+      console.error(`[Rollback Assíncrono Falhou] Projeto #${projectId}:`, err.message);
+    });
+
+    return res.json({ success: true, message: `Rollback para a versão ${commitHash.slice(0, 7)} iniciado.` });
+  } catch (error) {
+    console.error('[Process] Erro ao acionar rollback:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * Restaura o projeto para a versão mais recente da branch
+ */
+exports.restoreBranch = async (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id, 10);
+    const io = req.app.get('io');
+    
+    processManager.restoreProjectBranch(projectId, io).catch((err) => {
+      console.error(`[Restauração Assíncrona Falhou] Projeto #${projectId}:`, err.message);
+    });
+
+    return res.json({ success: true, message: 'Restauração para a versão mais recente da branch iniciada.' });
+  } catch (error) {
+    console.error('[Process] Erro ao restaurar branch:', error);
     return res.status(500).json({ success: false, error: error.message });
   }
 };

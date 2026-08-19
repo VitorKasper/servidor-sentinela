@@ -4,6 +4,8 @@ const treeKill = require('tree-kill');
 const gitService = require('./gitService');
 const { Project, DeploymentLog } = require('../models');
 
+const fs = require('fs');
+
 // Map em memória para gerenciar os processos e logs dos projetos
 // Key: projectId (Number) -> Value: { process: ChildProcess, logs: Array<String>, status: String }
 const runningProcesses = new Map();
@@ -36,9 +38,9 @@ function appendLog(projectId, text, io = null) {
 }
 
 /**
- * Converte o texto de variáveis de ambiente KEY=VALUE em objeto
+ * Converte o texto de variáveis de ambiente KEY=VALUE em objeto e injeta venv isolado se existir
  */
-function parseEnvVars(envString, customPort = null) {
+function parseEnvVars(envString, customPort = null, projectDir = null) {
   const env = { ...process.env };
 
   if (envString) {
@@ -60,7 +62,42 @@ function parseEnvVars(envString, customPort = null) {
     env.PORT = String(customPort);
   }
 
+  // Se o diretório do projeto possuir um ambiente virtual Python (venv ou .venv),
+  // injeta o diretório de executáveis no início da variável PATH.
+  if (projectDir && fs.existsSync(projectDir)) {
+    const isWindows = process.platform === 'win32';
+    const venvDir = fs.existsSync(path.join(projectDir, 'venv'))
+      ? path.join(projectDir, 'venv')
+      : (fs.existsSync(path.join(projectDir, '.venv')) ? path.join(projectDir, '.venv') : null);
+
+    if (venvDir) {
+      const venvBin = isWindows ? path.join(venvDir, 'Scripts') : path.join(venvDir, 'bin');
+      if (fs.existsSync(venvBin)) {
+        const currentPath = env.PATH || env.Path || '';
+        env.PATH = `${venvBin}${path.delimiter}${currentPath}`;
+        env.Path = `${venvBin}${path.delimiter}${currentPath}`;
+        env.VIRTUAL_ENV = venvDir;
+      }
+    }
+  }
+
   return env;
+}
+
+/**
+ * Garante a criação do ambiente virtual Python (venv) isolado
+ */
+async function ensurePythonVenv(project, projectDir, env, projectId, io) {
+  const isPython = project.projectType === 'PYTHON' || fs.existsSync(path.join(projectDir, 'requirements.txt'));
+  
+  if (isPython) {
+    const venvExists = fs.existsSync(path.join(projectDir, 'venv')) || fs.existsSync(path.join(projectDir, '.venv'));
+    if (!venvExists) {
+      appendLog(projectId, `[Python venv] Criando ambiente virtual isolado ('python -m venv venv')...`, io);
+      await runCommand('python -m venv venv', projectDir, env, projectId, io);
+      appendLog(projectId, `[Python venv] Ambiente virtual criado com sucesso. Pacotes serão instalados isoladamente.`, io);
+    }
+  }
 }
 
 /**
@@ -126,7 +163,7 @@ async function startProject(projectId, io = null) {
 
   appendLog(projectId, `[Sentinela] Iniciando aplicação com comando: '${project.startCommand}'...`, io);
 
-  const env = parseEnvVars(project.envVars, project.port);
+  const env = parseEnvVars(project.envVars, project.port, projectDir);
 
   // Spawna o processo principal
   const child = spawn(project.startCommand, {
@@ -185,8 +222,8 @@ async function startProject(projectId, io = null) {
       io.emit('project_status', { projectId: project.id, status: project.status, pid: null });
     }
 
-    // Auto restart se habilitado e encerrou inesperadamente
-    if (project.autoRestart && code !== 0) {
+    // Auto-Restart se habilitado e saída com erro
+    if (code !== 0 && project.autoRestart) {
       appendLog(projectId, `[AutoRestart] Reiniciando projeto automaticamente em 3 segundos...`, io);
       setTimeout(() => {
         startProject(projectId, io).catch(e => console.error('Erro no AutoRestart:', e));
@@ -275,29 +312,38 @@ async function deployProject(projectId, io = null) {
     const gitResult = await gitService.cloneOrPull(project, (msg) => appendLog(projectId, msg, io));
     const projectDir = gitResult.path;
 
-    const env = parseEnvVars(project.envVars, project.port);
+    // 3. Garante criação de ambiente virtual Python isolado se necessário
+    const initialEnv = parseEnvVars(project.envVars, project.port, projectDir);
+    await ensurePythonVenv(project, projectDir, initialEnv, projectId, io);
 
-    // 3. Executa comando de instalação de dependências se configurado
+    // Recalcula variáveis de ambiente com o venv injetado no PATH
+    const env = parseEnvVars(project.envVars, project.port, projectDir);
+
+    // 4. Executa comando de instalação de dependências se configurado
     if (project.installCommand && project.installCommand.trim()) {
       appendLog(projectId, `[Deploy] Instalando dependências ('${project.installCommand}')...`, io);
       await runCommand(project.installCommand, projectDir, env, projectId, io);
     }
 
-    // 4. Executa comando de build se configurado
+    // 5. Executa comando de build se configurado
     if (project.buildCommand && project.buildCommand.trim()) {
       appendLog(projectId, `[Deploy] Executando build ('${project.buildCommand}')...`, io);
       await runCommand(project.buildCommand, projectDir, env, projectId, io);
     }
 
-    // 5. Inicia o projeto
+    // 6. Inicia o projeto
     project.lastDeployedAt = new Date();
+    if (gitResult && gitResult.commitHash) {
+      project.currentCommitHash = gitResult.commitHash;
+      project.lastCommitHash = gitResult.commitHash;
+    }
     await project.save();
 
     await DeploymentLog.create({
       projectId: project.id,
       action: 'DEPLOY',
       status: 'SUCCESS',
-      details: `Deploy concluído com sucesso em ${new Date().toISOString()}`
+      details: `Deploy concluído com sucesso (${gitResult?.commitHash?.slice(0, 7) || 'N/A'}) em ${new Date().toISOString()}`
     });
 
     appendLog(projectId, `[Deploy] Build e preparação finalizados. Iniciando aplicação...`, io);
@@ -318,6 +364,140 @@ async function deployProject(projectId, io = null) {
       details: error.message
     });
 
+    if (io) io.emit('project_status', { projectId: project.id, status: 'ERROR', pid: null });
+    throw error;
+  }
+}
+
+/**
+ * Reverte o projeto para uma versão / commit anterior sob demanda
+ */
+async function rollbackProject(projectId, commitHash, io = null) {
+  const project = await Project.findByPk(projectId);
+  if (!project) throw new Error('Projeto não encontrado');
+
+  appendLog(projectId, `=====================================================`, io);
+  appendLog(projectId, `[Rollback] Revertendo aplicação para a versão '${commitHash.slice(0, 7)}'...`, io);
+
+  project.status = 'BUILDING';
+  await project.save();
+  if (io) io.emit('project_status', { projectId: project.id, status: 'BUILDING', pid: null });
+
+  try {
+    // 1. Para processo em execução
+    await stopProject(projectId, io);
+
+    // 2. Checkout do commit específico via Git
+    await gitService.checkoutCommit(project, commitHash, (msg) => appendLog(projectId, msg, io));
+    const projectDir = gitService.getProjectPath(project.slug);
+    
+    // 3. Garante venv
+    const initialEnv = parseEnvVars(project.envVars, project.port, projectDir);
+    await ensurePythonVenv(project, projectDir, initialEnv, projectId, io);
+    const env = parseEnvVars(project.envVars, project.port, projectDir);
+
+    // 4. Reinstala dependências da versão
+    if (project.installCommand && project.installCommand.trim()) {
+      appendLog(projectId, `[Rollback] Reinstalando dependências da versão...`, io);
+      await runCommand(project.installCommand, projectDir, env, projectId, io);
+    }
+
+    // 5. Executa build se configurado
+    if (project.buildCommand && project.buildCommand.trim()) {
+      appendLog(projectId, `[Rollback] Executando build da versão...`, io);
+      await runCommand(project.buildCommand, projectDir, env, projectId, io);
+    }
+
+    project.currentCommitHash = commitHash;
+    project.lastDeployedAt = new Date();
+    await project.save();
+
+    await DeploymentLog.create({
+      projectId: project.id,
+      action: 'ROLLBACK',
+      status: 'SUCCESS',
+      details: `Revertido para a versão ${commitHash.slice(0, 7)} em ${new Date().toISOString()}`
+    });
+
+    appendLog(projectId, `[Rollback Sucesso] Aplicação ativada na versão ${commitHash.slice(0, 7)}.`, io);
+    appendLog(projectId, `=====================================================`, io);
+
+    return await startProject(projectId, io);
+  } catch (error) {
+    appendLog(projectId, `[Rollback Erro] ${error.message}`, io);
+    appendLog(projectId, `=====================================================`, io);
+
+    project.status = 'ERROR';
+    await project.save();
+
+    await DeploymentLog.create({
+      projectId: project.id,
+      action: 'ROLLBACK',
+      status: 'FAILED',
+      details: error.message
+    });
+
+    if (io) io.emit('project_status', { projectId: project.id, status: 'ERROR', pid: null });
+    throw error;
+  }
+}
+
+/**
+ * Restaura o projeto para a versão mais recente da branch
+ */
+async function restoreProjectBranch(projectId, io = null) {
+  const project = await Project.findByPk(projectId);
+  if (!project) throw new Error('Projeto não encontrado');
+
+  appendLog(projectId, `=====================================================`, io);
+  appendLog(projectId, `[Restauração] Restaurando projeto para a ponta mais recente da branch '${project.branch}'...`, io);
+
+  project.status = 'BUILDING';
+  await project.save();
+  if (io) io.emit('project_status', { projectId: project.id, status: 'BUILDING', pid: null });
+
+  try {
+    await stopProject(projectId, io);
+
+    const latestSha = await gitService.restoreBranch(project, (msg) => appendLog(projectId, msg, io));
+    const projectDir = gitService.getProjectPath(project.slug);
+    
+    const initialEnv = parseEnvVars(project.envVars, project.port, projectDir);
+    await ensurePythonVenv(project, projectDir, initialEnv, projectId, io);
+    const env = parseEnvVars(project.envVars, project.port, projectDir);
+
+    if (project.installCommand && project.installCommand.trim()) {
+      appendLog(projectId, `[Restauração] Atualizando dependências...`, io);
+      await runCommand(project.installCommand, projectDir, env, projectId, io);
+    }
+
+    if (project.buildCommand && project.buildCommand.trim()) {
+      appendLog(projectId, `[Restauração] Executando build...`, io);
+      await runCommand(project.buildCommand, projectDir, env, projectId, io);
+    }
+
+    project.currentCommitHash = latestSha;
+    project.lastCommitHash = latestSha;
+    project.lastDeployedAt = new Date();
+    await project.save();
+
+    await DeploymentLog.create({
+      projectId: project.id,
+      action: 'RESTORE_BRANCH',
+      status: 'SUCCESS',
+      details: `Restaurado para a branch ${project.branch} (${latestSha.slice(0, 7)})`
+    });
+
+    appendLog(projectId, `[Restauração Sucesso] Projeto restaurado para a versão mais recente (${latestSha.slice(0, 7)}).`, io);
+    appendLog(projectId, `=====================================================`, io);
+
+    return await startProject(projectId, io);
+  } catch (error) {
+    appendLog(projectId, `[Restauração Erro] ${error.message}`, io);
+    appendLog(projectId, `=====================================================`, io);
+
+    project.status = 'ERROR';
+    await project.save();
     if (io) io.emit('project_status', { projectId: project.id, status: 'ERROR', pid: null });
     throw error;
   }
@@ -357,6 +537,8 @@ module.exports = {
   stopProject,
   restartProject,
   deployProject,
+  rollbackProject,
+  restoreProjectBranch,
   getLogs,
   clearLogs,
   isProjectRunning,

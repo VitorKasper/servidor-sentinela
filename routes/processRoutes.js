@@ -13,6 +13,11 @@ router.post('/:id/stop', isAuthenticated, requireOperatorOrAdmin, processControl
 router.post('/:id/restart', isAuthenticated, requireOperatorOrAdmin, processController.restart);
 router.post('/:id/redeploy', isAuthenticated, requireOperatorOrAdmin, processController.redeploy);
 
+// Histórico de versões e Rollback sob demanda
+router.get('/:id/commits', isAuthenticated, requireOperatorOrAdmin, processController.getCommits);
+router.post('/:id/rollback/:commitHash', isAuthenticated, requireOperatorOrAdmin, processController.rollback);
+router.post('/:id/restore-branch', isAuthenticated, requireOperatorOrAdmin, processController.restoreBranch);
+
 // Gerenciamento de logs
 router.get('/:id/logs', isAuthenticated, requireOperatorOrAdmin, processController.getLogs);
 router.post('/:id/clear-logs', isAuthenticated, requireOperatorOrAdmin, processController.clearLogs);

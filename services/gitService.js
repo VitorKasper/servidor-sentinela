@@ -50,14 +50,15 @@ async function cloneOrPull(project, logCallback = console.log) {
     try {
       await git.remote(['set-url', 'origin', repoUrlWithAuth]);
     } catch {
-      // Caso não consiga setar url, continua
+      // Continua se não conseguir redefinir url
     }
 
     await git.fetch();
     await git.checkout(branch);
     const pullResult = await git.pull('origin', branch);
-    logCallback(`[Git] Atualização concluída. Resumo: ${JSON.stringify(pullResult.summary)}`);
-    return { action: 'pull', path: projectDir };
+    const currentSha = await git.revparse(['HEAD']);
+    logCallback(`[Git] Atualização concluída. Versão ativa: ${currentSha.slice(0, 7)}`);
+    return { action: 'pull', path: projectDir, commitHash: currentSha.trim() };
   } else {
     logCallback(`[Git] Clonando repositório '${project.repoUrl}' na branch '${branch}'...`);
     if (!fs.existsSync(projectDir)) {
@@ -65,13 +66,117 @@ async function cloneOrPull(project, logCallback = console.log) {
     }
     const git = simpleGit();
     await git.clone(repoUrlWithAuth, projectDir, ['--branch', branch]);
-    logCallback(`[Git] Clonagem concluída com sucesso em ${projectDir}.`);
-    return { action: 'clone', path: projectDir };
+    const localGit = simpleGit(projectDir);
+    const currentSha = await localGit.revparse(['HEAD']);
+    logCallback(`[Git] Clonagem concluída com sucesso em ${projectDir}. Versão inicial: ${currentSha.slice(0, 7)}`);
+    return { action: 'clone', path: projectDir, commitHash: currentSha.trim() };
   }
+}
+
+/**
+ * Consulta o SHA do commit mais recente na branch remota do GitHub sem precisar baixar o código
+ */
+async function getRemoteLatestCommit(repoUrl, branch = 'main', gitToken = null) {
+  try {
+    const repoUrlWithAuth = formatRepoUrl(repoUrl, gitToken);
+    const git = simpleGit();
+    const result = await git.listRemote([repoUrlWithAuth, `refs/heads/${branch}`]);
+    
+    if (result && result.trim()) {
+      const parts = result.trim().split(/\s+/);
+      if (parts.length >= 1) {
+        return parts[0].trim();
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error(`[Git Remote Check Erro] ${repoUrl} (${branch}):`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Retorna o SHA do commit ativo localmente no projeto
+ */
+async function getLocalLatestCommit(slug) {
+  const projectDir = getProjectPath(slug);
+  if (!fs.existsSync(path.join(projectDir, '.git'))) return null;
+
+  try {
+    const git = simpleGit(projectDir);
+    const sha = await git.revparse(['HEAD']);
+    return sha ? sha.trim() : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Retorna o histórico de commits do repositório local
+ */
+async function getCommitHistory(slug, limit = 15) {
+  const projectDir = getProjectPath(slug);
+  if (!fs.existsSync(path.join(projectDir, '.git'))) return [];
+
+  try {
+    const git = simpleGit(projectDir);
+    const currentSha = await git.revparse(['HEAD']);
+    const logResult = await git.log({ maxCount: limit });
+
+    return logResult.all.map(commit => ({
+      hash: commit.hash,
+      shortHash: commit.hash.slice(0, 7),
+      author: commit.author_name,
+      email: commit.author_email,
+      date: commit.date,
+      message: commit.message,
+      isCurrent: commit.hash.trim() === currentSha.trim()
+    }));
+  } catch (error) {
+    console.error(`[Git Log Erro] Slug ${slug}:`, error.message);
+    return [];
+  }
+}
+
+/**
+ * Realiza o rollback / checkout para um commit específico sob demanda
+ */
+async function checkoutCommit(project, commitHash, logCallback = console.log) {
+  const projectDir = getProjectPath(project.slug);
+  if (!fs.existsSync(path.join(projectDir, '.git'))) {
+    throw new Error('Repositório não encontrado localmente');
+  }
+
+  logCallback(`[Rollback Git] Executando checkout para a versão '${commitHash.slice(0, 7)}'...`);
+  const git = simpleGit(projectDir);
+  await git.checkout(commitHash);
+  logCallback(`[Rollback Git] Versão '${commitHash.slice(0, 7)}' ativada com sucesso no diretório de execução.`);
+  return commitHash;
+}
+
+/**
+ * Restaura o repositório para a ponta mais recente da branch principal
+ */
+async function restoreBranch(project, logCallback = console.log) {
+  const projectDir = getProjectPath(project.slug);
+  const branch = project.branch || 'main';
+
+  logCallback(`[Git] Retornando para a branch '${branch}' mais recente...`);
+  const git = simpleGit(projectDir);
+  await git.checkout(branch);
+  await git.pull('origin', branch);
+  const currentSha = await git.revparse(['HEAD']);
+  logCallback(`[Git] Restaurado para a versão mais recente da branch '${branch}' (${currentSha.slice(0, 7)}).`);
+  return currentSha.trim();
 }
 
 module.exports = {
   getProjectPath,
   cloneOrPull,
+  getRemoteLatestCommit,
+  getLocalLatestCommit,
+  getCommitHistory,
+  checkoutCommit,
+  restoreBranch,
   STORAGE_ROOT
 };

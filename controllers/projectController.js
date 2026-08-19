@@ -61,7 +61,10 @@ exports.postCreate = async (req, res) => {
     envVars,
     port,
     autoRestart,
-    autoDeploy
+    autoDeploy,
+    autoSync,
+    syncIntervalMinutes,
+    projectType
   } = req.body;
 
   try {
@@ -79,18 +82,25 @@ exports.postCreate = async (req, res) => {
       counter++;
     }
 
+    const type = (projectType && ['NODEJS', 'PYTHON', 'GENERIC'].includes(projectType.toUpperCase()))
+      ? projectType.toUpperCase()
+      : 'NODEJS';
+
     const project = await Project.create({
       name: name.trim(),
       slug: uniqueSlug,
+      projectType: type,
       repoUrl: repoUrl.trim(),
       branch: (branch && branch.trim()) ? branch.trim() : 'main',
       gitToken: (gitToken && gitToken.trim()) ? gitToken.trim() : null,
-      installCommand: (installCommand && installCommand.trim()) ? installCommand.trim() : 'npm install',
+      installCommand: (installCommand && installCommand.trim()) ? installCommand.trim() : (type === 'PYTHON' ? 'pip install -r requirements.txt' : 'npm install'),
       buildCommand: (buildCommand && buildCommand.trim()) ? buildCommand.trim() : null,
-      startCommand: (startCommand && startCommand.trim()) ? startCommand.trim() : 'npm start',
+      startCommand: (startCommand && startCommand.trim()) ? startCommand.trim() : (type === 'PYTHON' ? 'python app.py' : 'npm start'),
       envVars: envVars ? envVars.trim() : null,
       port: port ? parseInt(port, 10) : null,
       autoRestart: autoRestart === 'on' || autoRestart === 'true' || autoRestart === true,
+      autoSync: autoSync === 'on' || autoSync === 'true' || autoSync === true,
+      syncIntervalMinutes: syncIntervalMinutes ? parseInt(syncIntervalMinutes, 10) : 2,
       status: 'STOPPED'
     });
 
@@ -151,7 +161,10 @@ exports.postEdit = async (req, res) => {
     startCommand,
     envVars,
     port,
-    autoRestart
+    autoRestart,
+    autoSync,
+    syncIntervalMinutes,
+    projectType
   } = req.body;
 
   try {
@@ -165,12 +178,17 @@ exports.postEdit = async (req, res) => {
     project.repoUrl = repoUrl.trim();
     project.branch = branch.trim() || 'main';
     if (gitToken !== undefined) project.gitToken = gitToken.trim() || null;
-    project.installCommand = installCommand.trim() || 'npm install';
+    if (projectType && ['NODEJS', 'PYTHON', 'GENERIC'].includes(projectType.toUpperCase())) {
+      project.projectType = projectType.toUpperCase();
+    }
+    project.installCommand = installCommand ? installCommand.trim() : (project.projectType === 'PYTHON' ? 'pip install -r requirements.txt' : 'npm install');
     project.buildCommand = buildCommand ? buildCommand.trim() : null;
-    project.startCommand = startCommand.trim() || 'npm start';
+    project.startCommand = startCommand ? startCommand.trim() : (project.projectType === 'PYTHON' ? 'python app.py' : 'npm start');
     project.envVars = envVars ? envVars.trim() : null;
     project.port = port ? parseInt(port, 10) : null;
     project.autoRestart = autoRestart === 'on' || autoRestart === 'true' || autoRestart === true;
+    project.autoSync = autoSync === 'on' || autoSync === 'true' || autoSync === true;
+    if (syncIntervalMinutes) project.syncIntervalMinutes = parseInt(syncIntervalMinutes, 10);
 
     await project.save();
     req.flash('success', `Configurações de '${project.name}' atualizadas com sucesso.`);

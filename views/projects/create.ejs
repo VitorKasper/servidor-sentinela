@@ -41,11 +41,41 @@
         <div class="form-hint">Preencha apenas se o repositório for privado no GitHub.</div>
       </div>
 
+      <!-- Seletor de Stack / Tecnologia -->
+      <div class="form-group">
+        <label class="form-label">Stack Tecnológica & Ambiente de Execução</label>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 8px;">
+          <label class="stack-option active" id="optStackNode" style="cursor: pointer;">
+            <input type="radio" name="projectType" value="NODEJS" checked style="display: none;">
+            <div style="font-size: 1.25rem; margin-bottom: 4px;">🟢</div>
+            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Node.js</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">npm, yarn ou pnpm</div>
+          </label>
+
+          <label class="stack-option" id="optStackPython" style="cursor: pointer;">
+            <input type="radio" name="projectType" value="PYTHON" style="display: none;">
+            <div style="font-size: 1.25rem; margin-bottom: 4px;">🐍</div>
+            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Python (venv Isolado)</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Cria e isola venv sem concorrência</div>
+          </label>
+
+          <label class="stack-option" id="optStackGeneric" style="cursor: pointer;">
+            <input type="radio" name="projectType" value="GENERIC" style="display: none;">
+            <div style="font-size: 1.25rem; margin-bottom: 4px;">⚙️</div>
+            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Customizado / Outro</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Comandos manuais livres</div>
+          </label>
+        </div>
+        <div id="pythonVenvNotice" style="display: none; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: var(--radius-md); padding: 10px 14px; font-size: 0.8rem; color: #93c5fd; margin-top: 8px;">
+          💡 <strong>Isolamento Automático:</strong> O Sentinela criará o ambiente virtual <code>venv</code> local automaticamente antes do deploy e injetará o interpretador isolado na execução do projeto, impedindo qualquer conflito de dependências.
+        </div>
+      </div>
+
       <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="installCommand">Comando de Instalação</label>
           <input type="text" id="installCommand" name="installCommand" class="form-control form-control-mono" value="npm install">
-          <div class="form-hint">Executado no deploy antes de iniciar (ex: npm install, yarn install).</div>
+          <div class="form-hint" id="installHint">Executado no deploy antes de iniciar (ex: npm install, yarn install).</div>
         </div>
 
         <div class="form-group">
@@ -57,7 +87,7 @@
         <div class="form-group">
           <label class="form-label" for="startCommand">Comando de Inicialização</label>
           <input type="text" id="startCommand" name="startCommand" class="form-control form-control-mono" value="npm start" required>
-          <div class="form-hint">Comando que mantém o processo ativo (ex: npm start, node app.js).</div>
+          <div class="form-hint" id="startHint">Comando que mantém o processo ativo (ex: npm start, node app.js).</div>
         </div>
       </div>
 
@@ -81,7 +111,7 @@
         <div class="form-hint">Formato <code>CHAVE=VALOR</code> por linha. Serão injetadas no processo durante a execução.</div>
       </div>
 
-      <div class="form-group" style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">
+      <div class="form-group" style="margin-top: 24px; display: flex; flex-direction: column; gap: 14px;">
         <label class="form-check">
           <input type="checkbox" name="autoRestart" id="autoRestart">
           <span><strong>Auto-Restart:</strong> Reiniciar automaticamente se o processo for finalizado de forma inesperada com erro.</span>
@@ -91,6 +121,25 @@
           <input type="checkbox" name="autoDeploy" id="autoDeploy" checked value="true">
           <span><strong>Deploy Imediato:</strong> Iniciar clonagem e deploy assim que salvar o projeto.</span>
         </label>
+
+        <div style="background: rgba(0, 240, 255, 0.04); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: var(--radius-md); padding: 16px;">
+          <label class="form-check">
+            <input type="checkbox" name="autoSync" id="autoSync">
+            <span style="font-weight: 700; color: var(--accent-cyan);">⚡ Ativar Auto-Sync do GitHub (Deploy Automático em Segundo Plano)</span>
+          </label>
+          <div class="form-hint" style="margin-top: 6px;">
+            O servidor consultará periodicamente o GitHub. Ao detectar um novo <code>git push</code>, fará o Re-Deploy automaticamente sem precisar de IP público ou Webhooks externos!
+          </div>
+          <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+            <label class="form-label" for="syncIntervalMinutes" style="margin-bottom: 0; font-size: 0.85rem;">Intervalo de Verificação:</label>
+            <select name="syncIntervalMinutes" id="syncIntervalMinutes" class="form-control form-control-mono" style="width: 170px; padding: 6px 10px; font-size: 0.85rem;">
+              <option value="1">A cada 1 minuto</option>
+              <option value="2" selected>A cada 2 minutos</option>
+              <option value="5">A cada 5 minutos</option>
+              <option value="10">A cada 10 minutos</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 12px;">
@@ -105,6 +154,40 @@
 </div>
 
 <script>
+  // Manipulação de Stack / Preset
+  const stackOptions = document.querySelectorAll('.stack-option');
+  const installCommandInput = document.getElementById('installCommand');
+  const startCommandInput = document.getElementById('startCommand');
+  const installHint = document.getElementById('installHint');
+  const startHint = document.getElementById('startHint');
+  const pythonVenvNotice = document.getElementById('pythonVenvNotice');
+
+  stackOptions.forEach(opt => {
+    opt.addEventListener('click', () => {
+      stackOptions.forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      const radio = opt.querySelector('input[type="radio"]');
+      if (radio) radio.checked = true;
+
+      const val = radio.value;
+      if (val === 'PYTHON') {
+        installCommandInput.value = 'pip install -r requirements.txt';
+        startCommandInput.value = 'python app.py';
+        installHint.innerText = 'Executado dentro do ambiente virtual isolado (venv).';
+        startHint.innerText = 'Inicia a aplicação usando o interpretador do venv isolado.';
+        pythonVenvNotice.style.display = 'block';
+      } else if (val === 'NODEJS') {
+        installCommandInput.value = 'npm install';
+        startCommandInput.value = 'npm start';
+        installHint.innerText = 'Executado no deploy antes de iniciar (ex: npm install, yarn install).';
+        startHint.innerText = 'Comando que mantém o processo ativo (ex: npm start, node app.js).';
+        pythonVenvNotice.style.display = 'none';
+      } else {
+        pythonVenvNotice.style.display = 'none';
+      }
+    });
+  });
+
   const portInput = document.getElementById('port');
   const btnSuggestPort = document.getElementById('btnSuggestPort');
   const portValidationMsg = document.getElementById('portValidationMsg');

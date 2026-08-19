@@ -33,7 +33,15 @@
         <div>
           <div class="project-top">
             <div>
-              <div class="project-name"><%= project.name %></div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div class="project-name"><%= project.name %></div>
+                <span class="badge-autosync" style="background: <%= project.projectType === 'PYTHON' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)' %>; border-color: <%= project.projectType === 'PYTHON' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(16, 185, 129, 0.4)' %>; color: <%= project.projectType === 'PYTHON' ? '#93c5fd' : '#34d399' %>;">
+                  <%= project.projectType === 'PYTHON' ? '🐍 Python' : (project.projectType === 'GENERIC' ? '⚙️ Custom' : '🟢 Node.js') %>
+                </span>
+                <% if (project.autoSync) { %>
+                  <span class="badge-autosync" title="Sincronização automática a cada <%= project.syncIntervalMinutes || 2 %> minutos">⚡ Auto-Sync</span>
+                <% } %>
+              </div>
               <div class="project-repo">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
                 <%= project.repoUrl %>

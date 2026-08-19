@@ -20,6 +20,11 @@ const Project = sequelize.define('Project', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  projectType: {
+    type: DataTypes.ENUM('NODEJS', 'PYTHON', 'GENERIC'),
+    defaultValue: 'NODEJS',
+    comment: 'Stack do projeto (Node.js, Python com venv isolado, Genérico)'
+  },
   repoUrl: {
     type: DataTypes.STRING(255),
     allowNull: false
@@ -64,6 +69,28 @@ const Project = sequelize.define('Project', {
   autoRestart: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
+  },
+  autoSync: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Habilita monitoramento e deploy automático de novos commits do GitHub'
+  },
+  syncIntervalMinutes: {
+    type: DataTypes.INTEGER,
+    defaultValue: 2,
+    comment: 'Intervalo de verificação em minutos'
+  },
+  lastCommitHash: {
+    type: DataTypes.STRING(80),
+    allowNull: true
+  },
+  currentCommitHash: {
+    type: DataTypes.STRING(80),
+    allowNull: true
+  },
+  lastSyncCheckAt: {
+    type: DataTypes.DATE,
+    allowNull: true
   },
   lastDeployedAt: {
     type: DataTypes.DATE,

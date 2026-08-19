@@ -2,15 +2,28 @@
 
 <div class="page-header">
   <div class="page-title-group">
-    <div style="display: flex; align-items: center; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
       <h1><%= project.name %></h1>
       <span class="status-pill status-<%= project.status %>" data-project-status-id="<%= project.id %>">
         <span class="status-dot"></span>
         <span class="status-text"><%= project.status %></span>
       </span>
+
+      <span class="badge-autosync" style="background: <%= project.projectType === 'PYTHON' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)' %>; border-color: <%= project.projectType === 'PYTHON' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(16, 185, 129, 0.4)' %>; color: <%= project.projectType === 'PYTHON' ? '#93c5fd' : '#34d399' %>;">
+        <%= project.projectType === 'PYTHON' ? '🐍 Python (venv isolado)' : (project.projectType === 'GENERIC' ? '⚙️ Custom' : '🟢 Node.js') %>
+      </span>
+
+      <% if (project.autoSync) { %>
+        <span class="badge-autosync" title="Sincronização automática ativa a cada <%= project.syncIntervalMinutes || 2 %> minutos">
+          ⚡ Auto-Sync (<%= project.syncIntervalMinutes || 2 %>m)
+        </span>
+      <% } %>
     </div>
     <p style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
       <%= project.repoUrl %> &bull; branch: <strong><%= project.branch %></strong> &bull; PID: <span data-project-pid-id="<%= project.id %>"><%= project.pid ? '#' + project.pid : 'Inativo' %></span>
+      <% if (project.currentCommitHash) { %>
+        &bull; versão: <code class="badge-commit">#<%= project.currentCommitHash.slice(0, 7) %></code>
+      <% } %>
     </p>
   </div>
 
@@ -25,26 +38,35 @@
   </div>
 </div>
 
+<!-- Banner Animado de Deploy em Andamento -->
+<div id="deployingBanner" class="deploy-in-progress-banner" style="<%= project.status === 'BUILDING' ? 'display: flex;' : 'display: none;' %>">
+  <div class="deploy-spinner"></div>
+  <div class="deploy-text-group">
+    <span class="deploy-title">🚀 DEPLOY EM ANDAMENTO...</span>
+    <span class="deploy-sub">Puxando alterações do GitHub, instalando pacotes e compilando a aplicação em segundo plano.</span>
+  </div>
+</div>
+
 <!-- Painel de Controle de Execução (Operador e Admin) -->
 <div class="card" style="margin-bottom: 20px;">
   <div class="card-body" style="padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-      <button type="button" id="btnStartProject" class="btn btn-success process-action-btn">
+      <button type="button" id="btnStartProject" class="btn btn-success process-action-btn" <%= project.status === 'BUILDING' ? 'disabled' : '' %>>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
         Iniciar
       </button>
 
-      <button type="button" id="btnStopProject" class="btn btn-danger process-action-btn">
+      <button type="button" id="btnStopProject" class="btn btn-danger process-action-btn" <%= project.status === 'BUILDING' ? 'disabled' : '' %>>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"></rect></svg>
         Parar
       </button>
 
-      <button type="button" id="btnRestartProject" class="btn btn-warning process-action-btn">
+      <button type="button" id="btnRestartProject" class="btn btn-warning process-action-btn" <%= project.status === 'BUILDING' ? 'disabled' : '' %>>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
         Reiniciar
       </button>
 
-      <button type="button" id="btnRedeployProject" class="btn btn-primary process-action-btn" style="box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);">
+      <button type="button" id="btnRedeployProject" class="btn btn-primary process-action-btn" style="box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);" <%= project.status === 'BUILDING' ? 'disabled' : '' %>>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 12 8 16"></polyline></svg>
         Re-Deploy (Git Pull + Start)
       </button>
@@ -61,39 +83,84 @@
   </div>
 </div>
 
-<!-- Console / Terminal em Tempo Real -->
-<div class="terminal-wrapper">
-  <div class="terminal-header">
-    <div style="display: flex; align-items: center; gap: 14px;">
-      <div class="terminal-controls-dots">
-        <div class="term-dot red"></div>
-        <div class="term-dot yellow"></div>
-        <div class="term-dot green"></div>
+<div class="terminal-grid-layout" style="display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start;">
+  <!-- Console / Terminal em Tempo Real -->
+  <div class="terminal-wrapper">
+    <div class="terminal-header">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div class="terminal-controls-dots">
+          <div class="term-dot red"></div>
+          <div class="term-dot yellow"></div>
+          <div class="term-dot green"></div>
+        </div>
+        <div class="terminal-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          sentinela-shell ~ <%= project.slug %>
+        </div>
       </div>
-      <div class="terminal-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-        sentinela-shell ~ <%= project.slug %>
+
+      <div style="display: flex; gap: 8px;">
+        <button type="button" id="btnCopyLogs" class="btn btn-secondary btn-sm" style="background: rgba(255, 255, 255, 0.05); font-size: 0.75rem;">
+          Copiar Logs
+        </button>
+        <button type="button" id="btnClearLogs" class="btn btn-secondary btn-sm" style="background: rgba(255, 255, 255, 0.05); font-size: 0.75rem;">
+          Limpar Tela
+        </button>
       </div>
     </div>
 
-    <div style="display: flex; gap: 8px;">
-      <button type="button" id="btnCopyLogs" class="btn btn-secondary btn-sm" style="background: rgba(255, 255, 255, 0.05); font-size: 0.75rem;">
-        Copiar Logs
-      </button>
-      <button type="button" id="btnClearLogs" class="btn btn-secondary btn-sm" style="background: rgba(255, 255, 255, 0.05); font-size: 0.75rem;">
-        Limpar Tela
-      </button>
+    <div class="terminal-screen" id="terminalScreen">
+      <% if (initialLogs && initialLogs.length > 0) { %>
+        <% initialLogs.forEach(function(logLine) { %>
+          <div class="terminal-line <%= (logLine.includes('[ERR]') || logLine.includes('[STDERR]') || logLine.includes('Erro')) ? 'error' : (logLine.includes('[Cmd Sucesso]') || logLine.includes('Sucesso') ? 'success' : (logLine.includes('[Sentinela]') || logLine.includes('[AutoSync]') || logLine.includes('[Deploy]') ? 'system' : 'info')) %>"><%= logLine %></div>
+        <% }); %>
+      <% } else { %>
+        <div class="terminal-line system">[Sentinela] Terminal inicializado. Aguardando saída do processo...</div>
+      <% } %>
     </div>
   </div>
 
-  <div class="terminal-screen" id="terminalScreen">
-    <% if (initialLogs && initialLogs.length > 0) { %>
-      <% initialLogs.forEach(function(logLine) { %>
-        <div class="terminal-line <%= (logLine.includes('[ERR]') || logLine.includes('[STDERR]')) ? 'error' : (logLine.includes('[Cmd Sucesso]') ? 'success' : (logLine.includes('[Sentinela]') ? 'system' : 'info')) %>"><%= logLine %></div>
-      <% }); %>
-    <% } else { %>
-      <div class="terminal-line system">[Sentinela] Terminal inicializado. Aguardando saída do processo...</div>
-    <% } %>
+  <!-- Histórico de Versões do GitHub & Rollback sob Demanda -->
+  <div class="card" style="border: 1px solid var(--border-subtle);">
+    <div class="card-header" style="padding: 14px 18px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.1rem;">🏷️</span>
+        <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--text-main);">Versões (Git Commits)</h3>
+      </div>
+      <button type="button" id="btnRestoreLatestBranch" class="btn btn-secondary btn-sm" style="font-size: 0.7rem; padding: 4px 8px;" title="Restaurar para a versão mais recente da branch <%= project.branch %>">
+        ⬆️ Atualizar p/ <%= project.branch %>
+      </button>
+    </div>
+
+    <div class="card-body" style="padding: 12px; max-height: 480px; overflow-y: auto;">
+      <% if (typeof commits !== 'undefined' && commits && commits.length > 0) { %>
+        <div class="commit-timeline">
+          <% commits.forEach(function(commit) { %>
+            <div class="commit-item <%= commit.isCurrent ? 'commit-current' : '' %>">
+              <div class="commit-header">
+                <code class="commit-sha">#<%= commit.shortHash %></code>
+                <% if (commit.isCurrent) { %>
+                  <span class="badge-active-version">● Versão Ativa</span>
+                <% } else { %>
+                  <button type="button" class="btn-rollback-action" data-commit-hash="<%= commit.hash %>" title="Voltar para esta versão">
+                    ⏪ Voltar
+                  </button>
+                <% } %>
+              </div>
+              <div class="commit-message" title="<%= commit.message %>"><%= commit.message %></div>
+              <div class="commit-meta">
+                <span><%= commit.author %></span> &bull;
+                <span><%= new Date(commit.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <div style="padding: 20px 10px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+          Nenhum commit encontrado ou repositório ainda não clonado. Execute o <strong>Re-Deploy</strong> inicial para carregar as versões.
+        </div>
+      <% } %>
+    </div>
   </div>
 </div>
 

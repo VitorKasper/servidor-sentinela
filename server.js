@@ -127,11 +127,16 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
+const autoSyncService = require('./services/autoSyncService');
+
 async function startServer() {
   try {
     console.log('[Sentinela] Inicializando banco de dados...');
     await ensureDatabaseExists();
     await syncAndSeed();
+
+    // Inicializa motor de Auto-Sync periódico para os projetos em segundo plano
+    autoSyncService.startAutoSyncEngine(io, 30);
 
     server.listen(PORT, HOST, () => {
       const localIps = getLocalIpAddresses();
