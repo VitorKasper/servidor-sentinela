@@ -70,6 +70,11 @@ const Project = sequelize.define('Project', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
+  ignoreSsl: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Ignora verificação de certificados SSL (pip, npm, git e requisições HTTPS)'
+  },
   autoSync: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,

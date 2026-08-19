@@ -64,7 +64,8 @@ exports.postCreate = async (req, res) => {
     autoDeploy,
     autoSync,
     syncIntervalMinutes,
-    projectType
+    projectType,
+    ignoreSsl
   } = req.body;
 
   try {
@@ -101,6 +102,7 @@ exports.postCreate = async (req, res) => {
       autoRestart: autoRestart === 'on' || autoRestart === 'true' || autoRestart === true,
       autoSync: autoSync === 'on' || autoSync === 'true' || autoSync === true,
       syncIntervalMinutes: syncIntervalMinutes ? parseInt(syncIntervalMinutes, 10) : 2,
+      ignoreSsl: ignoreSsl === 'on' || ignoreSsl === 'true' || ignoreSsl === true,
       status: 'STOPPED'
     });
 
@@ -164,7 +166,8 @@ exports.postEdit = async (req, res) => {
     autoRestart,
     autoSync,
     syncIntervalMinutes,
-    projectType
+    projectType,
+    ignoreSsl
   } = req.body;
 
   try {
@@ -189,6 +192,7 @@ exports.postEdit = async (req, res) => {
     project.autoRestart = autoRestart === 'on' || autoRestart === 'true' || autoRestart === true;
     project.autoSync = autoSync === 'on' || autoSync === 'true' || autoSync === true;
     if (syncIntervalMinutes) project.syncIntervalMinutes = parseInt(syncIntervalMinutes, 10);
+    project.ignoreSsl = ignoreSsl === 'on' || ignoreSsl === 'true' || ignoreSsl === true;
 
     await project.save();
     req.flash('success', `Configurações de '${project.name}' atualizadas com sucesso.`);

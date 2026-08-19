@@ -38,9 +38,9 @@ function appendLog(projectId, text, io = null) {
 }
 
 /**
- * Converte o texto de variáveis de ambiente KEY=VALUE em objeto e injeta venv isolado se existir
+ * Converte o texto de variáveis de ambiente KEY=VALUE em objeto e injeta venv isolado e bypass de SSL se habilitado
  */
-function parseEnvVars(envString, customPort = null, projectDir = null) {
+function parseEnvVars(envString, customPort = null, projectDir = null, ignoreSsl = false) {
   const env = { ...process.env };
 
   if (envString) {
@@ -60,6 +60,18 @@ function parseEnvVars(envString, customPort = null, projectDir = null) {
 
   if (customPort) {
     env.PORT = String(customPort);
+  }
+
+  // Bypass de SSL se o projeto estiver configurado para ignorar ou globalmente via .env
+  const shouldIgnoreSsl = ignoreSsl || process.env.IGNORE_SSL === 'true' || process.env.IGNORE_SSL === '1';
+  if (shouldIgnoreSsl) {
+    env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    env.PYTHONHTTPSVERIFY = '0';
+    env.PIP_TRUSTED_HOST = 'pypi.org pypi.python.org files.pythonhosted.org';
+    env.PIP_NO_SSL_VERIFY = '1';
+    env.GIT_SSL_NO_VERIFY = 'true';
+    env.NPM_CONFIG_STRICT_SSL = 'false';
+    env.YARN_STRICT_SSL = 'false';
   }
 
   // Se o diretório do projeto possuir um ambiente virtual Python (venv ou .venv),
@@ -82,6 +94,24 @@ function parseEnvVars(envString, customPort = null, projectDir = null) {
   }
 
   return env;
+}
+
+/**
+ * Ajusta comandos de instalação com flags explícitas de trusted-host se SSL for ignorado
+ */
+function formatCommandWithSslBypass(command, ignoreSsl = false) {
+  if (!command) return command;
+  const shouldIgnoreSsl = ignoreSsl || process.env.IGNORE_SSL === 'true' || process.env.IGNORE_SSL === '1';
+  if (!shouldIgnoreSsl) return command;
+
+  let cmd = command;
+  if (cmd.includes('pip install') && !cmd.includes('--trusted-host')) {
+    cmd = cmd.replace('pip install', 'pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host pypi.python.org');
+  }
+  if (cmd.includes('npm install') && !cmd.includes('--strict-ssl')) {
+    cmd = cmd.replace('npm install', 'npm install --strict-ssl=false');
+  }
+  return cmd;
 }
 
 /**
@@ -163,7 +193,7 @@ async function startProject(projectId, io = null) {
 
   appendLog(projectId, `[Sentinela] Iniciando aplicação com comando: '${project.startCommand}'...`, io);
 
-  const env = parseEnvVars(project.envVars, project.port, projectDir);
+  const env = parseEnvVars(project.envVars, project.port, projectDir, project.ignoreSsl);
 
   // Spawna o processo principal
   const child = spawn(project.startCommand, {
@@ -313,16 +343,17 @@ async function deployProject(projectId, io = null) {
     const projectDir = gitResult.path;
 
     // 3. Garante criação de ambiente virtual Python isolado se necessário
-    const initialEnv = parseEnvVars(project.envVars, project.port, projectDir);
+    const initialEnv = parseEnvVars(project.envVars, project.port, projectDir, project.ignoreSsl);
     await ensurePythonVenv(project, projectDir, initialEnv, projectId, io);
 
-    // Recalcula variáveis de ambiente com o venv injetado no PATH
-    const env = parseEnvVars(project.envVars, project.port, projectDir);
+    // Recalcula variáveis de ambiente com o venv injetado no PATH e SSL configurado
+    const env = parseEnvVars(project.envVars, project.port, projectDir, project.ignoreSsl);
 
     // 4. Executa comando de instalação de dependências se configurado
     if (project.installCommand && project.installCommand.trim()) {
-      appendLog(projectId, `[Deploy] Instalando dependências ('${project.installCommand}')...`, io);
-      await runCommand(project.installCommand, projectDir, env, projectId, io);
+      const installCmd = formatCommandWithSslBypass(project.installCommand.trim(), project.ignoreSsl);
+      appendLog(projectId, `[Deploy] Instalando dependências ('${installCmd}')...`, io);
+      await runCommand(installCmd, projectDir, env, projectId, io);
     }
 
     // 5. Executa comando de build se configurado
@@ -392,14 +423,15 @@ async function rollbackProject(projectId, commitHash, io = null) {
     const projectDir = gitService.getProjectPath(project.slug);
     
     // 3. Garante venv
-    const initialEnv = parseEnvVars(project.envVars, project.port, projectDir);
+    const initialEnv = parseEnvVars(project.envVars, project.port, projectDir, project.ignoreSsl);
     await ensurePythonVenv(project, projectDir, initialEnv, projectId, io);
-    const env = parseEnvVars(project.envVars, project.port, projectDir);
+    const env = parseEnvVars(project.envVars, project.port, projectDir, project.ignoreSsl);
 
     // 4. Reinstala dependências da versão
     if (project.installCommand && project.installCommand.trim()) {
-      appendLog(projectId, `[Rollback] Reinstalando dependências da versão...`, io);
-      await runCommand(project.installCommand, projectDir, env, projectId, io);
+      const installCmd = formatCommandWithSslBypass(project.installCommand.trim(), project.ignoreSsl);
+      appendLog(projectId, `[Rollback] Reinstalando dependências da versão ('${installCmd}')...`, io);
+      await runCommand(installCmd, projectDir, env, projectId, io);
     }
 
     // 5. Executa build se configurado
@@ -462,13 +494,14 @@ async function restoreProjectBranch(projectId, io = null) {
     const latestSha = await gitService.restoreBranch(project, (msg) => appendLog(projectId, msg, io));
     const projectDir = gitService.getProjectPath(project.slug);
     
-    const initialEnv = parseEnvVars(project.envVars, project.port, projectDir);
+    const initialEnv = parseEnvVars(project.envVars, project.port, projectDir, project.ignoreSsl);
     await ensurePythonVenv(project, projectDir, initialEnv, projectId, io);
-    const env = parseEnvVars(project.envVars, project.port, projectDir);
+    const env = parseEnvVars(project.envVars, project.port, projectDir, project.ignoreSsl);
 
     if (project.installCommand && project.installCommand.trim()) {
-      appendLog(projectId, `[Restauração] Atualizando dependências...`, io);
-      await runCommand(project.installCommand, projectDir, env, projectId, io);
+      const installCmd = formatCommandWithSslBypass(project.installCommand.trim(), project.ignoreSsl);
+      appendLog(projectId, `[Restauração] Atualizando dependências ('${installCmd}')...`, io);
+      await runCommand(installCmd, projectDir, env, projectId, io);
     }
 
     if (project.buildCommand && project.buildCommand.trim()) {

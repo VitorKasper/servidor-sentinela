@@ -122,6 +122,11 @@
           <span><strong>Deploy Imediato:</strong> Iniciar clonagem e deploy assim que salvar o projeto.</span>
         </label>
 
+        <label class="form-check">
+          <input type="checkbox" name="ignoreSsl" id="ignoreSsl">
+          <span><strong>Ignorar Verificação de Certificados SSL:</strong> Desativa checagem estrita de SSL em <code>pip</code>, <code>npm</code>, <code>git</code> e <code>node</code> (essencial para redes corporativas com proxy, firewall ou certificados autoassinados).</span>
+        </label>
+
         <div style="background: rgba(0, 240, 255, 0.04); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: var(--radius-md); padding: 16px;">
           <label class="form-check">
             <input type="checkbox" name="autoSync" id="autoSync">
