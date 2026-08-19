@@ -155,11 +155,11 @@ async function startServer() {
           }
         });
       }
-      console.log('-------------------------------------------------------------');
-      console.log('  Credenciais Padrão de Acesso:');
-      console.log(`    - ADMIN:    ${process.env.DEFAULT_ADMIN_EMAIL || 'admin@sentinela.local'} / ${process.env.DEFAULT_ADMIN_PASSWORD || 'admin123'}`);
-      console.log(`    - OPERADOR: ${process.env.DEFAULT_OPERATOR_EMAIL || 'operador@sentinela.local'} / ${process.env.DEFAULT_OPERATOR_PASSWORD || 'operador123'}`);
-      console.log('=============================================================\n');
+      // console.log('-------------------------------------------------------------');
+      // console.log('  Credenciais Padrão de Acesso:');
+      // console.log(`    - ADMIN:    ${process.env.DEFAULT_ADMIN_EMAIL || 'admin@sentinela.local'} / ${process.env.DEFAULT_ADMIN_PASSWORD || 'admin123'}`);
+      // console.log(`    - OPERADOR: ${process.env.DEFAULT_OPERATOR_EMAIL || 'operador@sentinela.local'} / ${process.env.DEFAULT_OPERATOR_PASSWORD || 'operador123'}`);
+      // console.log('=============================================================\n');
     });
   } catch (error) {
     console.error('\n[Sentinela Erro Fatal] Não foi possível iniciar o servidor:', error.message);
