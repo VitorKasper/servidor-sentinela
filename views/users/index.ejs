@@ -1,0 +1,114 @@
+<div class="page-header">
+  <div class="page-title-group">
+    <h1>Gerenciamento de Operadores & Usuários</h1>
+    <p>Cadastre operadores com permissão de terminal e controle de deploys, ou novos administradores.</p>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 32px;">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+      Novo Usuário / Operador
+    </div>
+  </div>
+  <div class="card-body">
+    <form action="/users/create" method="POST">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="userName">Nome Completo <span class="required">*</span></label>
+          <input type="text" id="userName" name="name" class="form-control" placeholder="ex: João Operador" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="userEmail">E-mail de Acesso <span class="required">*</span></label>
+          <input type="email" id="userEmail" name="email" class="form-control" placeholder="joao@sentinela.local" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="userPassword">Senha <span class="required">*</span></label>
+          <input type="password" id="userPassword" name="password" class="form-control" placeholder="••••••••" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="userRole">Papel de Acesso <span class="required">*</span></label>
+          <select id="userRole" name="role" class="form-control" required>
+            <option value="OPERATOR" selected>Operador (Acesso a Terminal, Start/Stop/Restart/Redeploy)</option>
+            <option value="ADMIN">Administrador (Controle Total + Cadastrar Projetos e Usuários)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+        <button type="submit" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Cadastrar Usuário
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      Usuários Cadastrados
+    </div>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Papel</th>
+            <th>Status</th>
+            <th>Data de Cadastro</th>
+            <th style="text-align: right;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% users.forEach(function(u) { %>
+            <tr>
+              <td>
+                <strong><%= u.name %></strong>
+                <% if (u.id === currentUser.id) { %>
+                  <span style="font-size: 0.7rem; background: rgba(0, 240, 255, 0.15); color: var(--accent-cyan); padding: 2px 6px; border-radius: 4px; margin-left: 6px;">Você</span>
+                <% } %>
+              </td>
+              <td style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);"><%= u.email %></td>
+              <td>
+                <span class="user-role-badge <%= u.role === 'ADMIN' ? 'role-admin' : 'role-operator' %>">
+                  <%= u.role === 'ADMIN' ? 'Administrador' : 'Operador' %>
+                </span>
+              </td>
+              <td>
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: <%= u.active ? '#34d399' : '#f87171' %>;">
+                  <span style="width: 8px; height: 8px; border-radius: 50%; background-color: <%= u.active ? '#10b981' : '#ef4444' %>;"></span>
+                  <%= u.active ? 'Ativo' : 'Inativo' %>
+                </span>
+              </td>
+              <td style="font-size: 0.8rem; color: var(--text-muted);">
+                <%= new Date(u.createdAt).toLocaleDateString('pt-BR') %>
+              </td>
+              <td style="text-align: right;">
+                <% if (u.id !== currentUser.id) { %>
+                  <form action="/users/<%= u.id %>/delete" method="POST" class="confirm-delete-form" data-confirm-text="Tem certeza que deseja excluir o usuário <%= u.name %>?" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      Excluir
+                    </button>
+                  </form>
+                <% } else { %>
+                  <span style="color: var(--text-dim); font-size: 0.8rem;">-</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,146 @@
+<div class="page-header">
+  <div class="page-title-group">
+    <h1>Editar Projeto: <%= project.name %></h1>
+    <p>Ajuste comandos, variáveis de ambiente ou branch do repositório.</p>
+  </div>
+  <a href="/projects/<%= project.id %>/terminal" class="btn btn-secondary">Voltar ao Terminal</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+      Configurações Gerais
+    </div>
+  </div>
+  <div class="card-body">
+    <form action="/projects/<%= project.id %>/edit" method="POST">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="name">Nome do Projeto <span class="required">*</span></label>
+          <input type="text" id="name" name="name" class="form-control" value="<%= project.name %>" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="branch">Branch Git</label>
+          <input type="text" id="branch" name="branch" class="form-control form-control-mono" value="<%= project.branch %>">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="repoUrl">URL do Repositório GitHub <span class="required">*</span></label>
+        <input type="url" id="repoUrl" name="repoUrl" class="form-control form-control-mono" value="<%= project.repoUrl %>" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="gitToken">Token de Acesso Pessoal / GitHub Token (Opcional)</label>
+        <input type="password" id="gitToken" name="gitToken" class="form-control form-control-mono" value="<%= project.gitToken || '' %>" placeholder="Deixe em branco para manter inalterado">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="installCommand">Comando de Instalação</label>
+          <input type="text" id="installCommand" name="installCommand" class="form-control form-control-mono" value="<%= project.installCommand %>">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="buildCommand">Comando de Build (Opcional)</label>
+          <input type="text" id="buildCommand" name="buildCommand" class="form-control form-control-mono" value="<%= project.buildCommand || '' %>">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="startCommand">Comando de Inicialização</label>
+          <input type="text" id="startCommand" name="startCommand" class="form-control form-control-mono" value="<%= project.startCommand %>" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label" for="port">Porta de Serviço do Projeto</label>
+          <div style="display: flex; gap: 10px;">
+            <input type="number" id="port" name="port" class="form-control form-control-mono" value="<%= project.port || '' %>" placeholder="ex: 3001">
+            <button type="button" id="btnSuggestPort" class="btn btn-secondary" style="white-space: nowrap; font-size: 0.8rem;" title="Descobrir e preencher com a próxima porta livre">
+              ⚡ Sugerir Porta Livre
+            </button>
+          </div>
+          <div id="portValidationMsg" style="font-size: 0.8rem; margin-top: 6px; display: none;"></div>
+          <div class="form-hint">Porta em que o serviço responderá na rede local (LAN).</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="envVars">Variáveis de Ambiente</label>
+        <textarea id="envVars" name="envVars" class="form-control form-control-mono" rows="4"><%= project.envVars || '' %></textarea>
+      </div>
+
+      <div class="form-group" style="margin-top: 24px;">
+        <label class="form-check">
+          <input type="checkbox" name="autoRestart" id="autoRestart" <%= project.autoRestart ? 'checked' : '' %>>
+          <span><strong>Auto-Restart:</strong> Reiniciar automaticamente se o processo encerrar inesperadamente.</span>
+        </label>
+      </div>
+
+      <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 12px;">
+        <a href="/projects/<%= project.id %>/terminal" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const portInput = document.getElementById('port');
+  const btnSuggestPort = document.getElementById('btnSuggestPort');
+  const portValidationMsg = document.getElementById('portValidationMsg');
+
+  // Sugere próxima porta livre
+  btnSuggestPort.addEventListener('click', async () => {
+    btnSuggestPort.disabled = true;
+    btnSuggestPort.innerText = 'Buscando...';
+    try {
+      const res = await fetch('/api/ports/suggest');
+      const data = await res.json();
+      if (data.success && data.suggestedPort) {
+        portInput.value = data.suggestedPort;
+        validatePort(data.suggestedPort);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      btnSuggestPort.disabled = false;
+      btnSuggestPort.innerText = '⚡ Sugerir Porta Livre';
+    }
+  });
+
+  // Validação em tempo real
+  let debounceTimeout = null;
+  portInput.addEventListener('input', () => {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => {
+      const portVal = portInput.value.trim();
+      if (portVal) {
+        validatePort(portVal);
+      } else {
+        portValidationMsg.style.display = 'none';
+      }
+    }, 400);
+  });
+
+  async function validatePort(port) {
+    try {
+      const res = await fetch(`/api/ports/check/${port}`);
+      const data = await res.json();
+      portValidationMsg.style.display = 'block';
+
+      if (data.available) {
+        portValidationMsg.style.color = '#34d399';
+        portValidationMsg.innerHTML = `✓ Porta <strong>:${port}</strong> está disponível e livre para uso.`;
+      } else {
+        portValidationMsg.style.color = '#f87171';
+        portValidationMsg.innerHTML = `⚠️ Porta <strong>:${port}</strong> está ocupada por: ${data.usedBy || 'Outro serviço'}`;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+</script>

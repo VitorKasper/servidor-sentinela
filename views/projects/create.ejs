@@ -1,0 +1,162 @@
+<div class="page-header">
+  <div class="page-title-group">
+    <h1>Puxar Projeto do GitHub</h1>
+    <p>Cadastre o repositório para clonar, instalar dependências e hospedar o serviço no servidor.</p>
+  </div>
+  <a href="/projects" class="btn btn-secondary">Voltar para Projetos</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+      Configurações do Repositório & Execução
+    </div>
+  </div>
+  <div class="card-body">
+    <form action="/projects/create" method="POST">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="name">Nome do Projeto <span class="required">*</span></label>
+          <input type="text" id="name" name="name" class="form-control" placeholder="ex: API de Pagamentos" required autofocus>
+          <div class="form-hint">Nome de identificação no painel.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="branch">Branch Git</label>
+          <input type="text" id="branch" name="branch" class="form-control form-control-mono" value="main" placeholder="main">
+          <div class="form-hint">Branch principal para clone e deploys (ex: main, master, prod).</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="repoUrl">URL do Repositório GitHub <span class="required">*</span></label>
+        <input type="url" id="repoUrl" name="repoUrl" class="form-control form-control-mono" placeholder="https://github.com/usuario/repositorio.git" required>
+        <div class="form-hint">URL HTTPS pública do repositório no GitHub.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="gitToken">Token de Acesso Pessoal / GitHub Token (Opcional)</label>
+        <input type="password" id="gitToken" name="gitToken" class="form-control form-control-mono" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+        <div class="form-hint">Preencha apenas se o repositório for privado no GitHub.</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="installCommand">Comando de Instalação</label>
+          <input type="text" id="installCommand" name="installCommand" class="form-control form-control-mono" value="npm install">
+          <div class="form-hint">Executado no deploy antes de iniciar (ex: npm install, yarn install).</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="buildCommand">Comando de Build (Opcional)</label>
+          <input type="text" id="buildCommand" name="buildCommand" class="form-control form-control-mono" placeholder="npm run build">
+          <div class="form-hint">Executado após a instalação se necessário (ex: build de TypeScript ou React).</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="startCommand">Comando de Inicialização</label>
+          <input type="text" id="startCommand" name="startCommand" class="form-control form-control-mono" value="npm start" required>
+          <div class="form-hint">Comando que mantém o processo ativo (ex: npm start, node app.js).</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label" for="port">Porta de Serviço do Projeto (Opcional)</label>
+          <div style="display: flex; gap: 10px;">
+            <input type="number" id="port" name="port" class="form-control form-control-mono" placeholder="ex: 3001">
+            <button type="button" id="btnSuggestPort" class="btn btn-secondary" style="white-space: nowrap; font-size: 0.8rem;" title="Descobrir e preencher com a próxima porta livre">
+              ⚡ Sugerir Porta Livre
+            </button>
+          </div>
+          <div id="portValidationMsg" style="font-size: 0.8rem; margin-top: 6px; display: none;"></div>
+          <div class="form-hint">Se preenchido, será injetado como a variável de ambiente <code>PORT</code>.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="envVars">Variáveis de Ambiente (.env customizado)</label>
+        <textarea id="envVars" name="envVars" class="form-control form-control-mono" rows="4" placeholder="NODE_ENV=production&#10;API_KEY=minha_chave_secreta&#10;CUSTOM_VAR=123"></textarea>
+        <div class="form-hint">Formato <code>CHAVE=VALOR</code> por linha. Serão injetadas no processo durante a execução.</div>
+      </div>
+
+      <div class="form-group" style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">
+        <label class="form-check">
+          <input type="checkbox" name="autoRestart" id="autoRestart">
+          <span><strong>Auto-Restart:</strong> Reiniciar automaticamente se o processo for finalizado de forma inesperada com erro.</span>
+        </label>
+
+        <label class="form-check">
+          <input type="checkbox" name="autoDeploy" id="autoDeploy" checked value="true">
+          <span><strong>Deploy Imediato:</strong> Iniciar clonagem e deploy assim que salvar o projeto.</span>
+        </label>
+      </div>
+
+      <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 12px;">
+        <a href="/projects" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Salvar e Clonar Repositório
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const portInput = document.getElementById('port');
+  const btnSuggestPort = document.getElementById('btnSuggestPort');
+  const portValidationMsg = document.getElementById('portValidationMsg');
+
+  // Sugere próxima porta livre
+  btnSuggestPort.addEventListener('click', async () => {
+    btnSuggestPort.disabled = true;
+    btnSuggestPort.innerText = 'Buscando...';
+    try {
+      const res = await fetch('/api/ports/suggest');
+      const data = await res.json();
+      if (data.success && data.suggestedPort) {
+        portInput.value = data.suggestedPort;
+        validatePort(data.suggestedPort);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      btnSuggestPort.disabled = false;
+      btnSuggestPort.innerText = '⚡ Sugerir Porta Livre';
+    }
+  });
+
+  // Validação em tempo real
+  let debounceTimeout = null;
+  portInput.addEventListener('input', () => {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => {
+      const portVal = portInput.value.trim();
+      if (portVal) {
+        validatePort(portVal);
+      } else {
+        portValidationMsg.style.display = 'none';
+      }
+    }, 400);
+  });
+
+  async function validatePort(port) {
+    try {
+      const res = await fetch(`/api/ports/check/${port}`);
+      const data = await res.json();
+      portValidationMsg.style.display = 'block';
+
+      if (data.available) {
+        portValidationMsg.style.color = '#34d399';
+        portValidationMsg.innerHTML = `✓ Porta <strong>:${port}</strong> está disponível e livre para uso.`;
+      } else {
+        portValidationMsg.style.color = '#f87171';
+        portValidationMsg.innerHTML = `⚠️ Porta <strong>:${port}</strong> está ocupada por: ${data.usedBy || 'Outro serviço'}`;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+</script>

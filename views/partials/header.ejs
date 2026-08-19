@@ -1,0 +1,82 @@
+<header class="top-header">
+  <div class="lan-badge-container">
+    <div class="lan-badge" title="Endereço de acesso na Rede Local (LAN)">
+      <span class="pulse-dot"></span>
+      <span>LAN: http://<%= (typeof primaryIp !== 'undefined' ? primaryIp : '0.0.0.0') %>:<%= (typeof serverPort !== 'undefined' ? serverPort : (process.env.PORT || 3000)) %></span>
+    </div>
+  </div>
+
+  <div class="user-profile-widget">
+    <div class="user-info">
+      <span class="user-name"><%= currentUser ? currentUser.name : 'Usuário' %></span>
+      <span class="user-role-badge <%= (currentUser && currentUser.role === 'ADMIN') ? 'role-admin' : 'role-operator' %>">
+        <%= (currentUser && currentUser.role === 'ADMIN') ? 'Administrador' : 'Operador' %>
+      </span>
+    </div>
+    <div class="user-avatar">
+      <%= currentUser ? currentUser.name.charAt(0).toUpperCase() : 'U' %>
+    </div>
+  </div>
+</header>
+
+<% if (currentUser && currentUser.role === 'ADMIN') { %>
+  <!-- Modal para Alterar Nome e Fazer Upload da Logo da Empresa -->
+  <div id="companyModal" class="custom-modal-backdrop" style="display: none;">
+    <div class="custom-modal-content">
+      <div class="custom-modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="stat-icon-box stat-cyan" style="width: 36px; height: 36px; font-size: 1rem;">
+            🎨
+          </div>
+          <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Personalizar Logo & Identidade</h3>
+        </div>
+        <button type="button" id="btnCloseCompanyModal" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.25rem;">&times;</button>
+      </div>
+
+      <form id="formUpdateCompany" action="/api/settings/company" method="POST" enctype="multipart/form-data" style="margin-top: 18px;">
+        <!-- Upload de Imagem de Logo com Dropzone Tracejada -->
+        <div class="form-group">
+          <label class="form-label">Logo da Empresa / Ícone</label>
+          <div class="logo-upload-dropzone" id="logoDropzone">
+            <input type="file" id="inputLogoFile" name="logoImage" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/x-icon" style="display: none;">
+            
+            <div id="logoDropzoneEmpty" style="<%= (typeof companyLogoUrl !== 'undefined' && companyLogoUrl) ? 'display: none;' : '' %>">
+              <div class="dropzone-dashed-preview">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+              <p style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-top: 8px;">Clique para selecionar uma imagem</p>
+              <p style="font-size: 0.75rem; color: var(--text-muted);">PNG, JPG, SVG ou WebP (recomendado: 128x128px ou proporcional)</p>
+            </div>
+
+            <div id="logoDropzoneFilled" style="<%= (typeof companyLogoUrl !== 'undefined' && companyLogoUrl) ? '' : 'display: none;' %> text-align: center;">
+              <img id="logoPreviewImg" src="<%= (typeof companyLogoUrl !== 'undefined' && companyLogoUrl) ? companyLogoUrl : '' %>" alt="Preview da Logo" class="logo-modal-preview">
+              <div style="margin-top: 8px; display: flex; gap: 8px; justify-content: center;">
+                <button type="button" id="btnChangeLogo" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">Trocar Imagem</button>
+                <button type="button" id="btnRemoveLogo" class="btn btn-danger btn-sm" style="font-size: 0.75rem;">Remover Logo</button>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="inputRemoveLogo" name="removeLogo" value="false">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputCompanyName">Nome da Empresa / Aplicação <span class="required">*</span></label>
+          <input type="text" id="inputCompanyName" name="companyName" class="form-control" value="<%= typeof companyName !== 'undefined' ? companyName : 'SENTINELA' %>" placeholder="ex: Minha Empresa Tech" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputCompanyTag">Subtítulo / Slogan</label>
+          <input type="text" id="inputCompanyTag" name="companyTag" class="form-control" value="<%= typeof companyTag !== 'undefined' ? companyTag : 'Server PaaS Hub' %>" placeholder="ex: Server PaaS Hub">
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+          <button type="button" id="btnCancelCompanyModal" class="btn btn-secondary btn-sm">Cancelar</button>
+          <button type="submit" id="btnSaveCompany" class="btn btn-primary btn-sm">Salvar Alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% } %>
