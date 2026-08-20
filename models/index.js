@@ -18,7 +18,7 @@ async function syncAndSeed() {
   // Configurações padrão da empresa / marca
   const companyNameSetting = await SystemSetting.findOne({ where: { key: 'company_name' } });
   if (!companyNameSetting) {
-    await SystemSetting.create({ key: 'company_name', value: 'SENTINELA' });
+    await SystemSetting.create({ key: 'company_name', value: 'Seu nome' });
   }
 
   const companyTagSetting = await SystemSetting.findOne({ where: { key: 'company_tag' } });
@@ -29,13 +29,13 @@ async function syncAndSeed() {
   // Verifica se já existem usuários
   const count = await User.count();
   if (count === 0) {
-    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@sentinela.local';
+    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@servidor.local';
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
     const adminName = process.env.DEFAULT_ADMIN_NAME || 'Administrador';
 
-    const opEmail = process.env.DEFAULT_OPERATOR_EMAIL || 'operador@sentinela.local';
+    const opEmail = process.env.DEFAULT_OPERATOR_EMAIL || 'operador@servidor.local';
     const opPass = process.env.DEFAULT_OPERATOR_PASSWORD || 'operador123';
-    const opName = process.env.DEFAULT_OPERATOR_NAME || 'Operador Sentinela';
+    const opName = process.env.DEFAULT_OPERATOR_NAME || 'Operador';
 
     await User.create({
       name: adminName,

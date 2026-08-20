@@ -1,9 +1,97 @@
+<style>
+  /* Wrapper para manter a logo e a LAN Badge juntas e alinhadas */
+  .header-left-actions {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+  }
+
+  /* Estilos da Logo Animada */
+  .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Syne', sans-serif; /* Lembre-se de importar a fonte Syne no <head> */
+  }
+  .logo-container {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* Fundo da logo atualizado para o azul rgba(2, 203, 218) */
+      background: radial-gradient(circle at center, rgba(2, 203, 218, 0.08) 0%, transparent 60%);
+  }
+  #logo {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+  }
+  svg#logo path {
+      stroke: #02cbda; /* Cor das linhas atualizada */
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      /* Brilho neon atualizado para o azul rgba(2, 203, 218) */
+      filter: drop-shadow(0 0 12px rgba(2, 203, 218, 0.5));
+  }
+  .logo-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+  }
+  .logo-text .first-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-main, #ffffff);
+      letter-spacing: 0.04em;
+  }
+  .logo-text .last-name {
+      font-size: 18px;
+      font-weight: 300;
+      color: #02cbda; /* Cor do sobrenome atualizada */
+      letter-spacing: 0.08em;
+  }
+</style>
+
 <header class="top-header">
-  <div class="lan-badge-container">
-    <div class="lan-badge" title="Endereço de acesso na Rede Local (LAN)">
-      <span class="pulse-dot"></span>
-      <span>LAN: http://<%= (typeof primaryIp !== 'undefined' ? primaryIp : '0.0.0.0') %>:<%= (typeof serverPort !== 'undefined' ? serverPort : (process.env.PORT || 3000)) %></span>
+  <!-- Wrapper agrupando Logo e LAN -->
+  <div class="header-left-actions">
+    
+    <!-- Logo Animada -->
+    <div class="nav-logo">
+      <div class="logo-container">
+          <svg viewBox="0 0 200 160" id="logo">
+              <path d="M 40,80 L 70,110" />
+              <path d="M 100,80 L 70,110">
+                  <animate attributeName="d" values="M 100,80 L 70,110; M 100,80 L 70,110; M 70,50 L 40,80; M 70,50 L 40,80; M 100,80 L 70,110; M 100,80 L 70,110" keyTimes="0; 0.25; 0.45; 0.75; 0.95; 1" calcMode="spline" keySplines="0 0 1 1; 0.65 0 0.35 1; 0 0 1 1; 0.65 0 0.35 1; 0 0 1 1" dur="4s" repeatCount="indefinite" />
+              </path>
+              <path d="M 100,30 L 100,130">
+                  <animate attributeName="d" values="M 100,30 L 100,130; M 100,30 L 100,130; M 115,30 L 85,130; M 115,30 L 85,130; M 100,30 L 100,130; M 100,30 L 100,130" keyTimes="0; 0.25; 0.45; 0.75; 0.95; 1" calcMode="spline" keySplines="0 0 1 1; 0.65 0 0.35 1; 0 0 1 1; 0.65 0 0.35 1; 0 0 1 1" dur="4s" repeatCount="indefinite" />
+              </path>
+              <path d="M 130,50 L 100,80">
+                  <animate attributeName="d" values="M 130,50 L 100,80; M 130,50 L 100,80; M 130,50 L 160,80; M 130,50 L 160,80; M 130,50 L 100,80; M 130,50 L 100,80" keyTimes="0; 0.25; 0.45; 0.75; 0.95; 1" calcMode="spline" keySplines="0 0 1 1; 0.65 0 0.35 1; 0 0 1 1; 0.65 0 0.35 1; 0 0 1 1" dur="4s" repeatCount="indefinite" />
+              </path>
+              <path d="M 100,80 L 130,110">
+                  <animate attributeName="d" values="M 100,80 L 130,110; M 100,80 L 130,110; M 160,80 L 130,110; M 160,80 L 130,110; M 100,80 L 130,110; M 100,80 L 130,110" keyTimes="0; 0.25; 0.45; 0.75; 0.95; 1" calcMode="spline" keySplines="0 0 1 1; 0.65 0 0.35 1; 0 0 1 1; 0.65 0 0.35 1; 0 0 1 1" dur="4s" repeatCount="indefinite" />
+              </path>
+          </svg>
+      </div>
+      <div class="logo-text">
+          <span class="first-name">Vitor</span>
+          <span class="last-name">Kasper</span>
+      </div>
     </div>
+
+    <!-- LAN Badge Original -->
+    <div class="lan-badge-container">
+      <div class="lan-badge" title="Endereço de acesso na Rede Local (LAN)">
+        <span class="pulse-dot"></span>
+        <span>LAN: http://<%= (typeof primaryIp !== 'undefined' ? primaryIp : '0.0.0.0') %>:<%= (typeof serverPort !== 'undefined' ? serverPort : (process.env.PORT || 3000)) %></span>
+      </div>
+    </div>
+    
   </div>
 
   <div class="user-profile-widget">

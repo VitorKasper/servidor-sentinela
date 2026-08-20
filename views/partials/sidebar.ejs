@@ -20,7 +20,7 @@
       <% } %>
     </div>
     <div class="brand-text-wrapper" <% if (currentUser && currentUser.role === 'ADMIN') { %>style="cursor: pointer;" title="Clique para editar o nome da empresa"<% } %>>
-      <div class="brand-name" id="sidebarBrandName"><%= typeof companyName !== 'undefined' ? companyName : 'SENTINELA' %></div>
+      <div class="brand-name" id="sidebarBrandName"><%= typeof companyName !== 'undefined' ? companyName : 'Servidor' %></div>
       <div class="brand-tag" id="sidebarBrandTag"><%= typeof companyTag !== 'undefined' ? companyTag : 'Server PaaS Hub' %></div>
     </div>
   </div>

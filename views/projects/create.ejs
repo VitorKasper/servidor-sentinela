@@ -47,21 +47,21 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 8px;">
           <label class="stack-option active" id="optStackNode" style="cursor: pointer;">
             <input type="radio" name="projectType" value="NODEJS" checked style="display: none;">
-            <div style="font-size: 1.25rem; margin-bottom: 4px;">🟢</div>
+            <div style="font-size: 1.25rem; margin-bottom: 4px;"><img src="/images/nodejs.png" style="width: 40px; height: 40px;"></div>
             <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Node.js</div>
             <div style="font-size: 0.75rem; color: var(--text-muted);">npm, yarn ou pnpm</div>
           </label>
 
           <label class="stack-option" id="optStackPython" style="cursor: pointer;">
             <input type="radio" name="projectType" value="PYTHON" style="display: none;">
-            <div style="font-size: 1.25rem; margin-bottom: 4px;">🐍</div>
+            <div style="font-size: 1.25rem; margin-bottom: 4px;"><img src="/images/python.png" style="width: 40px; height: 40px;"></div>
             <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Python (venv Isolado)</div>
             <div style="font-size: 0.75rem; color: var(--text-muted);">Cria e isola venv sem concorrência</div>
           </label>
 
           <label class="stack-option" id="optStackGeneric" style="cursor: pointer;">
             <input type="radio" name="projectType" value="GENERIC" style="display: none;">
-            <div style="font-size: 1.25rem; margin-bottom: 4px;">⚙️</div>
+            <div style="font-size: 1.25rem; margin-bottom: 4px;"><img src="/images/settings.png" style="width: 40px; height: 40px;"></div>
             <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Customizado / Outro</div>
             <div style="font-size: 0.75rem; color: var(--text-muted);">Comandos manuais livres</div>
           </label>
@@ -97,7 +97,7 @@
           <div style="display: flex; gap: 10px;">
             <input type="number" id="port" name="port" class="form-control form-control-mono" placeholder="ex: 3001">
             <button type="button" id="btnSuggestPort" class="btn btn-secondary" style="white-space: nowrap; font-size: 0.8rem;" title="Descobrir e preencher com a próxima porta livre">
-              ⚡ Sugerir Porta Livre
+              Sugerir Porta Livre
             </button>
           </div>
           <div id="portValidationMsg" style="font-size: 0.8rem; margin-top: 6px; display: none;"></div>
@@ -130,7 +130,7 @@
         <div style="background: rgba(0, 240, 255, 0.04); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: var(--radius-md); padding: 16px;">
           <label class="form-check">
             <input type="checkbox" name="autoSync" id="autoSync">
-            <span style="font-weight: 700; color: var(--accent-cyan);">⚡ Ativar Auto-Sync do GitHub (Deploy Automático em Segundo Plano)</span>
+            <span style="font-weight: 700; color: var(--accent-cyan);">Ativar Auto-Sync do GitHub (Deploy Automático em Segundo Plano)</span>
           </label>
           <div class="form-hint" style="margin-top: 6px;">
             O servidor consultará periodicamente o GitHub. Ao detectar um novo <code>git push</code>, fará o Re-Deploy automaticamente sem precisar de IP público ou Webhooks externos!
@@ -212,7 +212,7 @@
       console.error(e);
     } finally {
       btnSuggestPort.disabled = false;
-      btnSuggestPort.innerText = '⚡ Sugerir Porta Livre';
+      btnSuggestPort.innerText = 'Sugerir Porta Livre';
     }
   });
 
