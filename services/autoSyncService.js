@@ -1,31 +1,78 @@
-const { Project } = require('../models');
+const { Project, Workspace } = require('../models');
 const gitService = require('./gitService');
 const processManager = require('./processManager');
+const workspaceService = require('./workspaceService');
 
 let syncIntervalTimer = null;
 let isChecking = false;
 
 /**
- * Executa uma rodada de verificação de commits remotos para projetos com Auto-Sync ativo
+ * Executa uma rodada de verificação de commits remotos para projetos e workspaces com Auto-Sync ativo
  */
 async function checkProjectsForUpdates(io = null) {
   if (isChecking) return;
   isChecking = true;
 
   try {
-    const activeAutoSyncProjects = await Project.findAll({
-      where: { autoSync: true }
+    const now = Date.now();
+
+    // 1. Verificação de Workspaces com Auto-Sync ativo
+    const activeAutoSyncWorkspaces = await Workspace.findAll({
+      where: { autoSync: true },
+      include: [{ model: Project, as: 'projects' }]
     });
 
-    const now = Date.now();
+    for (const workspace of activeAutoSyncWorkspaces) {
+      const intervalMs = (workspace.syncIntervalMinutes || 2) * 60 * 1000;
+      const lastCheck = workspace.lastSyncCheckAt ? new Date(workspace.lastSyncCheckAt).getTime() : 0;
+
+      if (now - lastCheck >= intervalMs) {
+        const remoteSha = await gitService.getRemoteLatestCommit(
+          workspace.repoUrl,
+          workspace.branch,
+          workspace.gitToken
+        );
+
+        if (remoteSha) {
+          const currentLocalSha = workspace.currentCommitHash || workspace.lastCommitHash;
+
+          if (!currentLocalSha || currentLocalSha.trim() !== remoteSha.trim()) {
+            console.log(`[AutoSync Workspace] Novo commit detectado no GitHub para '${workspace.name}' (${remoteSha.slice(0, 7)}). Disparando Re-Deploy dos projetos...`);
+
+            if (workspace.projects && workspace.projects.length > 0) {
+              workspace.projects.forEach(p => {
+                processManager.appendLog(
+                  p.id,
+                  `[AutoSync Workspace] 🚀 Novo commit detectado no GitHub (${remoteSha.slice(0, 7)}). Atualizando o Workspace...`,
+                  io
+                );
+              });
+            }
+
+            workspaceService.deployWorkspace(workspace.id, io).catch((err) => {
+              console.error(`[AutoSync Erro] Falha no deploy automático do Workspace #${workspace.id}:`, err.message);
+            });
+
+            workspace.currentCommitHash = remoteSha;
+            workspace.lastCommitHash = remoteSha;
+          }
+        }
+
+        workspace.lastSyncCheckAt = new Date();
+        await workspace.save();
+      }
+    }
+
+    // 2. Verificação de Projetos Individuais (sem Workspace) com Auto-Sync ativo
+    const activeAutoSyncProjects = await Project.findAll({
+      where: { autoSync: true, workspaceId: null }
+    });
 
     for (const project of activeAutoSyncProjects) {
       const intervalMs = (project.syncIntervalMinutes || 2) * 60 * 1000;
       const lastCheck = project.lastSyncCheckAt ? new Date(project.lastSyncCheckAt).getTime() : 0;
 
-      // Verifica se o tempo decorrido atingiu o intervalo configurado
       if (now - lastCheck >= intervalMs) {
-        // Se o projeto já estiver em deploy manual no momento, aguarda a próxima rodada
         if (project.status === 'BUILDING') continue;
 
         const remoteSha = await gitService.getRemoteLatestCommit(
@@ -37,7 +84,6 @@ async function checkProjectsForUpdates(io = null) {
         if (remoteSha) {
           const currentLocalSha = project.currentCommitHash || project.lastCommitHash;
 
-          // Se o commit remoto for diferente do que está rodando localmente
           if (!currentLocalSha || currentLocalSha.trim() !== remoteSha.trim()) {
             console.log(`[AutoSync] Novo commit detectado para '${project.name}' (${remoteSha.slice(0, 7)}). Disparando deploy automático...`);
             processManager.appendLog(
@@ -46,14 +92,12 @@ async function checkProjectsForUpdates(io = null) {
               io
             );
 
-            // Dispara o deploy
             processManager.deployProject(project.id, io).catch((err) => {
               console.error(`[AutoSync Erro] Falha no deploy automático do Projeto #${project.id}:`, err.message);
             });
           }
         }
 
-        // Atualiza a data da última checagem
         project.lastSyncCheckAt = new Date();
         await project.save();
       }
@@ -73,12 +117,10 @@ function startAutoSyncEngine(io = null, checkIntervalSeconds = 30) {
 
   console.log(`[AutoSync] Motor de sincronização automática ativado (verificação a cada ${checkIntervalSeconds}s).`);
   
-  // Roda uma verificação inicial após 10 segundos
   setTimeout(() => {
     checkProjectsForUpdates(io);
   }, 10000);
 
-  // Intervalo regular
   syncIntervalTimer = setInterval(() => {
     checkProjectsForUpdates(io);
   }, checkIntervalSeconds * 1000);

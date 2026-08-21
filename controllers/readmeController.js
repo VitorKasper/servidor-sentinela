@@ -24,7 +24,7 @@ exports.showReadmeView = async (req, res) => {
       rawContent: readmeData.rawContent || '',
       stats: readmeData.stats || { wordCount: 0, readingTimeMinutes: 1, lineCount: 0, fileCount: 0 },
       headings: readmeData.headings || [],
-      readmeError: readmeData.success ? null : (readmeData.error || 'Nenhum README disponível.')
+      readmeError: readmeData.success ? null : (readmeData.error || 'Nenhum arquivo Markdown disponível.')
     });
   } catch (error) {
     console.error('[ReadmeController] Erro ao carregar tela de README:', error);

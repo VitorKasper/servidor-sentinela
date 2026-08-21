@@ -9,9 +9,7 @@
         <span class="status-text"><%= project.status %></span>
       </span>
 
-      <span class="badge-autosync" style="background: <%= project.projectType === 'PYTHON' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)' %>; border-color: <%= project.projectType === 'PYTHON' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(16, 185, 129, 0.4)' %>; color: <%= project.projectType === 'PYTHON' ? '#93c5fd' : '#34d399' %>;">
-        <%= project.projectType === 'PYTHON' ? '🐍 Python (venv isolado)' : (project.projectType === 'GENERIC' ? '⚙️ Custom' : '🟢 Node.js') %>
-      </span>
+      <%- include('../partials/tech-badge', { project: project }) %>
 
       <% if (project.autoSync) { %>
         <span class="badge-autosync" title="Sincronização automática ativa a cada <%= project.syncIntervalMinutes || 2 %> minutos">

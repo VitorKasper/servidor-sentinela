@@ -177,8 +177,8 @@ function findReadmesInDir(rootDir, currentDir = rootDir, results = []) {
           findReadmesInDir(rootDir, fullPath, results);
         }
       } else if (entry.isFile()) {
-        // Verifica se o nome do arquivo inicia com 'readme' (ex: README.md, readme.txt, README-pt.md, etc.)
-        if (/^readme(\..+)?$/i.test(entry.name)) {
+        // Considera qualquer arquivo Markdown do projeto (README.md, MANUAL.md, CHANGELOG.md, docs/guia.md, etc.)
+        if (/\.(md|markdown)$/i.test(entry.name)) {
           const stats = fs.statSync(fullPath);
           const relativePath = path.relative(rootDir, fullPath).replace(/\\/g, '/');
           const dirRelative = path.dirname(relativePath).replace(/\\/g, '/');
@@ -223,8 +223,13 @@ function findProjectReadmes(projectSlug) {
 
   const readmes = findReadmesInDir(projectDir, projectDir, []);
 
-  // Ordena: Primeiro o README da raiz, depois os demais por pasta e nome alfabético
+  // Ordena: Primeiro o README da raiz, depois os demais arquivos .md por pasta e nome alfabético
+  const isNamedReadme = (fileName) => /^readme(\..+)?$/i.test(fileName);
   readmes.sort((a, b) => {
+    const aIsRootReadme = a.isRoot && isNamedReadme(a.name);
+    const bIsRootReadme = b.isRoot && isNamedReadme(b.name);
+    if (aIsRootReadme && !bIsRootReadme) return -1;
+    if (!aIsRootReadme && bIsRootReadme) return 1;
     if (a.isRoot && !b.isRoot) return -1;
     if (!a.isRoot && b.isRoot) return 1;
     return a.relativePath.localeCompare(b.relativePath);
@@ -278,7 +283,7 @@ function getReadmeContent(projectSlug, relativeFilePath = null) {
   if (readmes.length === 0) {
     return {
       success: false,
-      error: 'Nenhum arquivo README encontrado no projeto.',
+      error: 'Nenhum arquivo Markdown (.md) encontrado no projeto.',
       readmes: []
     };
   }

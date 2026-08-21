@@ -3,17 +3,42 @@ const fs = require('fs');
 const simpleGit = require('simple-git');
 
 const STORAGE_ROOT = path.resolve(process.cwd(), process.env.PROJECTS_STORAGE_PATH || './storage/projects');
+const WORKSPACES_STORAGE_ROOT = path.resolve(process.cwd(), './storage/workspaces');
 
-// Garante que o diretório base de storage existe
+// Garante que os diretórios base de storage existem
 if (!fs.existsSync(STORAGE_ROOT)) {
   fs.mkdirSync(STORAGE_ROOT, { recursive: true });
 }
+if (!fs.existsSync(WORKSPACES_STORAGE_ROOT)) {
+  fs.mkdirSync(WORKSPACES_STORAGE_ROOT, { recursive: true });
+}
 
 /**
- * Retorna o caminho absoluto do diretório do projeto
+ * Retorna o caminho absoluto do diretório de um Workspace
  */
-function getProjectPath(slug) {
-  return path.join(STORAGE_ROOT, slug);
+function getWorkspacePath(workspaceSlug) {
+  return path.join(WORKSPACES_STORAGE_ROOT, workspaceSlug);
+}
+
+/**
+ * Retorna o caminho absoluto do diretório do projeto (ou de seu Workspace se pertencer a um)
+ */
+function getProjectPath(target) {
+  if (typeof target === 'object' && target !== null) {
+    if (target.workspace && target.workspace.slug) {
+      return getWorkspacePath(target.workspace.slug);
+    }
+    if (target.workspaceSlug) {
+      return getWorkspacePath(target.workspaceSlug);
+    }
+    if (target.isWorkspace) {
+      return getWorkspacePath(target.slug);
+    }
+    if (target.slug) {
+      return path.join(STORAGE_ROOT, target.slug);
+    }
+  }
+  return path.join(STORAGE_ROOT, String(target));
 }
 
 /**
@@ -33,14 +58,14 @@ function formatRepoUrl(repoUrl, gitToken) {
 }
 
 /**
- * Clona ou atualiza o repositório Git do projeto
+ * Clona ou atualiza o repositório Git do projeto ou workspace
  */
-async function cloneOrPull(project, logCallback = console.log) {
-  const projectDir = getProjectPath(project.slug);
-  const repoUrlWithAuth = formatRepoUrl(project.repoUrl, project.gitToken);
-  const branch = project.branch || 'main';
+async function cloneOrPull(entity, logCallback = console.log) {
+  const projectDir = getProjectPath(entity);
+  const repoUrlWithAuth = formatRepoUrl(entity.repoUrl, entity.gitToken);
+  const branch = entity.branch || 'main';
 
-  logCallback(`[Git] Verificando diretório do projeto: ${projectDir}`);
+  logCallback(`[Git] Verificando diretório: ${projectDir}`);
 
   if (fs.existsSync(path.join(projectDir, '.git'))) {
     logCallback(`[Git] Repositório existente detectado. Atualizando via 'git fetch & pull' na branch '${branch}'...`);
@@ -60,7 +85,7 @@ async function cloneOrPull(project, logCallback = console.log) {
     logCallback(`[Git] Atualização concluída. Versão ativa: ${currentSha.slice(0, 7)}`);
     return { action: 'pull', path: projectDir, commitHash: currentSha.trim() };
   } else {
-    logCallback(`[Git] Clonando repositório '${project.repoUrl}' na branch '${branch}'...`);
+    logCallback(`[Git] Clonando repositório '${entity.repoUrl}' na branch '${branch}'...`);
     if (!fs.existsSync(projectDir)) {
       fs.mkdirSync(projectDir, { recursive: true });
     }
@@ -172,11 +197,13 @@ async function restoreBranch(project, logCallback = console.log) {
 
 module.exports = {
   getProjectPath,
+  getWorkspacePath,
   cloneOrPull,
   getRemoteLatestCommit,
   getLocalLatestCommit,
   getCommitHistory,
   checkoutCommit,
   restoreBranch,
-  STORAGE_ROOT
+  STORAGE_ROOT,
+  WORKSPACES_STORAGE_ROOT
 };

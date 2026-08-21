@@ -1,0 +1,15 @@
+<%
+  const __techMeta = {
+    NODEJS: { icon: '/images/nodejs.png', label: 'Node.js', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', color: '#34d399' },
+    PYTHON: { icon: '/images/python.png', label: 'Python', bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.4)', color: '#93c5fd' },
+    GENERIC: { icon: '/images/settings.png', label: 'Custom', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.4)', color: '#94a3b8' }
+  };
+  const __rawTypes = (project.projectType || 'NODEJS').split(',').map(t => t.trim().toUpperCase()).filter(Boolean);
+  const __types = __rawTypes.filter(t => __techMeta[t]);
+  const __activeTypes = __types.length ? __types : ['NODEJS'];
+%>
+<% __activeTypes.forEach(function(__t) { const __meta = __techMeta[__t]; %>
+  <span class="badge-autosync" style="background: <%= __meta.bg %>; border-color: <%= __meta.border %>; color: <%= __meta.color %>;">
+    <img src="<%= __meta.icon %>" alt="<%= __meta.label %>" style="width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px;"><%= __meta.label %>
+  </span>
+<% }); %>

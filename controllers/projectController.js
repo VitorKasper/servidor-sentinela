@@ -18,14 +18,51 @@ function slugify(text) {
     .replace(/\-\-+/g, '-');
 }
 
+const VALID_PROJECT_TYPES = ['NODEJS', 'PYTHON', 'GENERIC'];
+
+/**
+ * Normaliza a(s) stack(s) selecionada(s) (checkbox múltiplo) em uma string "NODEJS,PYTHON"
+ */
+function normalizeProjectTypes(input) {
+  const arr = Array.isArray(input) ? input : (input ? [input] : []);
+  const valid = arr.map(t => String(t).toUpperCase()).filter(t => VALID_PROJECT_TYPES.includes(t));
+  const unique = [...new Set(valid)];
+  return unique.length ? unique.join(',') : 'NODEJS';
+}
+
+/**
+ * Sugere comandos padrão de instalação/inicialização com base nas stacks selecionadas
+ */
+function getDefaultCommands(projectTypeStr) {
+  const types = (projectTypeStr || '').split(',').map(t => t.trim().toUpperCase());
+  const isNode = types.includes('NODEJS');
+  const isPython = types.includes('PYTHON');
+
+  const installParts = [];
+  if (isNode) installParts.push('npm install');
+  if (isPython) installParts.push('pip install -r requirements.txt');
+
+  const install = installParts.length ? installParts.join(' && ') : 'npm install';
+  const start = (isPython && !isNode) ? 'python app.py' : 'npm start';
+
+  return { install, start };
+}
+
+const workspaceService = require('../services/workspaceService');
+const { Workspace } = require('../models');
+
 /**
  * Lista todos os projetos
  */
 exports.index = async (req, res) => {
   try {
-    const projects = await Project.findAll({
-      order: [['createdAt', 'DESC']]
-    });
+    const [projects, workspaces] = await Promise.all([
+      Project.findAll({
+        include: [{ model: Workspace, as: 'workspace' }],
+        order: [['createdAt', 'DESC']]
+      }),
+      workspaceService.getAllWorkspaces()
+    ]);
 
     const enrichedProjects = projects.map(proj => {
       const projObj = proj.toJSON ? proj.toJSON() : { ...proj };
@@ -36,8 +73,9 @@ exports.index = async (req, res) => {
     });
 
     res.render('projects/index', {
-      title: 'Projetos - Servidor Sentinela',
-      projects: enrichedProjects
+      title: 'Projetos & Aplicações - Servidor Sentinela',
+      projects: enrichedProjects,
+      workspaces
     });
   } catch (error) {
     console.error('[Projects] Erro ao listar projetos:', error);
@@ -93,9 +131,8 @@ exports.postCreate = async (req, res) => {
       counter++;
     }
 
-    const type = (projectType && ['NODEJS', 'PYTHON', 'GENERIC'].includes(projectType.toUpperCase()))
-      ? projectType.toUpperCase()
-      : 'NODEJS';
+    const type = normalizeProjectTypes(projectType);
+    const defaults = getDefaultCommands(type);
 
     const project = await Project.create({
       name: name.trim(),
@@ -104,9 +141,9 @@ exports.postCreate = async (req, res) => {
       repoUrl: repoUrl.trim(),
       branch: (branch && branch.trim()) ? branch.trim() : 'main',
       gitToken: (gitToken && gitToken.trim()) ? gitToken.trim() : null,
-      installCommand: (installCommand && installCommand.trim()) ? installCommand.trim() : (type === 'PYTHON' ? 'pip install -r requirements.txt' : 'npm install'),
+      installCommand: (installCommand && installCommand.trim()) ? installCommand.trim() : defaults.install,
       buildCommand: (buildCommand && buildCommand.trim()) ? buildCommand.trim() : null,
-      startCommand: (startCommand && startCommand.trim()) ? startCommand.trim() : (type === 'PYTHON' ? 'python app.py' : 'npm start'),
+      startCommand: (startCommand && startCommand.trim()) ? startCommand.trim() : defaults.start,
       envVars: envVars ? envVars.trim() : null,
       port: port ? parseInt(port, 10) : null,
       autoRestart: autoRestart === 'on' || autoRestart === 'true' || autoRestart === true,
@@ -191,12 +228,13 @@ exports.postEdit = async (req, res) => {
     project.repoUrl = repoUrl.trim();
     project.branch = branch.trim() || 'main';
     if (gitToken !== undefined) project.gitToken = gitToken.trim() || null;
-    if (projectType && ['NODEJS', 'PYTHON', 'GENERIC'].includes(projectType.toUpperCase())) {
-      project.projectType = projectType.toUpperCase();
+    if (projectType) {
+      project.projectType = normalizeProjectTypes(projectType);
     }
-    project.installCommand = installCommand ? installCommand.trim() : (project.projectType === 'PYTHON' ? 'pip install -r requirements.txt' : 'npm install');
+    const defaults = getDefaultCommands(project.projectType);
+    project.installCommand = installCommand ? installCommand.trim() : defaults.install;
     project.buildCommand = buildCommand ? buildCommand.trim() : null;
-    project.startCommand = startCommand ? startCommand.trim() : (project.projectType === 'PYTHON' ? 'python app.py' : 'npm start');
+    project.startCommand = startCommand ? startCommand.trim() : defaults.start;
     project.envVars = envVars ? envVars.trim() : null;
     project.port = port ? parseInt(port, 10) : null;
     project.autoRestart = autoRestart === 'on' || autoRestart === 'true' || autoRestart === true;

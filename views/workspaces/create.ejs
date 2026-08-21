@@ -1,0 +1,238 @@
+<div class="page-header">
+  <div class="page-title-group">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <a href="/workspaces" class="btn btn-secondary btn-sm">← Voltar</a>
+      <h1 style="margin: 0;">Novo Workspace</h1>
+    </div>
+    <p style="margin-top: 4px;">Cadastre um repositório GitHub e configure os projetos/serviços que rodarão na mesma pasta clonada.</p>
+  </div>
+</div>
+
+<form action="/workspaces/create" method="POST" style="max-width: 850px;">
+  <!-- Repositório Central -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+      <div class="card-title">1. Configurações do Repositório GitHub</div>
+    </div>
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label">Nome do Workspace *</label>
+        <input type="text" name="name" class="form-control" placeholder="ex: Sistema Encaminha TecPet" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">URL do Repositório GitHub (HTTPS) *</label>
+        <input type="text" name="repoUrl" class="form-control" placeholder="https://github.com/usuario/meu-repositorio.git" required>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label class="form-label">Branch Git</label>
+          <input type="text" name="branch" class="form-control" value="main" placeholder="main">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Personal Access Token (Opcional)</label>
+          <input type="password" name="gitToken" class="form-control" placeholder="ghp_xxxxxxxxxxxx">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label class="form-label">Comando de Instalação (Executado 1x na pasta)</label>
+          <input type="text" name="installCommand" class="form-control" value="npm install">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Comando de Build (Opcional)</label>
+          <input type="text" name="buildCommand" class="form-control" placeholder="npm run build">
+        </div>
+      </div>
+
+      <!-- Importador de .env -->
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" style="margin: 0;">Variáveis de Ambiente Compartilhadas (.env)</label>
+          <div style="display: flex; gap: 8px;">
+            <label class="btn btn-secondary btn-sm" style="margin: 0; cursor: pointer;" title="Selecionar arquivo .env do computador">
+              📥 Importar Arquivo .env
+              <input type="file" accept=".env,.env.*,.txt" onchange="handleEnvFileUpload(event, 'workspaceEnvVars')" style="display: none;">
+            </label>
+          </div>
+        </div>
+        <textarea name="envVars" id="workspaceEnvVars" class="form-control" rows="5" placeholder="KEY=VALUE&#10;PORT=3000&#10;DATABASE_URL=mysql://user:pass@localhost/db" style="font-family: var(--font-mono); font-size: 0.85rem;"></textarea>
+      </div>
+
+      <div style="display: flex; gap: 24px; flex-wrap: wrap; margin-top: 14px; background: var(--bg-surface-elevated); padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;">
+          <input type="checkbox" name="autoRestart" checked> Reinício Automático em Erros
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;">
+          <input type="checkbox" name="autoSync" checked> ⚡ Auto-Sync / Deploy Automático GitHub
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;">
+          <input type="checkbox" name="ignoreSsl"> Ignorar Verificação SSL (pip/npm/git)
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projetos / Portas Iniciais -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="card-title">2. Projetos e Portas do Workspace</div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addProjectRow()">+ Adicionar Outra Porta/Projeto</button>
+    </div>
+    <div class="card-body">
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
+        Configure cada serviço/porta do projeto. Use o botão <strong>✨ Sugerir Porta</strong> para buscar portas livres automaticamente na LAN.
+      </p>
+
+      <div id="projectRowsContainer">
+        <!-- Linha 1 -->
+        <div class="project-row" style="background: var(--bg-surface-elevated); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 12px;">
+          <div style="display: grid; grid-template-columns: 2fr 1.5fr 2fr 1fr; gap: 12px; align-items: flex-end;">
+            <div>
+              <label class="form-label" style="font-size: 0.8rem;">Nome do Serviço *</label>
+              <input type="text" name="projectNames" class="form-control" placeholder="ex: API Backend" required>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" style="font-size: 0.8rem; margin: 0;">Porta LAN</label>
+                <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 0.7rem;" onclick="suggestPortForInput(this)">✨ Sugerir</button>
+              </div>
+              <input type="number" name="projectPorts" class="form-control port-input" placeholder="3001">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.8rem;">Comando Start *</label>
+              <input type="text" name="projectStartCommands" class="form-control" value="npm start" required>
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.8rem;">Stack</label>
+              <select name="projectTypes" class="form-control">
+                <option value="NODEJS">Node.js</option>
+                <option value="PYTHON">Python</option>
+                <option value="GENERIC">Genérico</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Linha 2 -->
+        <div class="project-row" style="background: var(--bg-surface-elevated); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 12px;">
+          <div style="display: grid; grid-template-columns: 2fr 1.5fr 2fr 1fr; gap: 12px; align-items: flex-end;">
+            <div>
+              <label class="form-label" style="font-size: 0.8rem;">Nome do Serviço</label>
+              <input type="text" name="projectNames" class="form-control" placeholder="ex: Frontend Web">
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" style="font-size: 0.8rem; margin: 0;">Porta LAN</label>
+                <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 0.7rem;" onclick="suggestPortForInput(this)">✨ Sugerir</button>
+              </div>
+              <input type="number" name="projectPorts" class="form-control port-input" placeholder="3002">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.8rem;">Comando Start</label>
+              <input type="text" name="projectStartCommands" class="form-control" placeholder="npm run dev">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.8rem;">Stack</label>
+              <select name="projectTypes" class="form-control">
+                <option value="NODEJS">Node.js</option>
+                <option value="PYTHON">Python</option>
+                <option value="GENERIC">Genérico</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 12px; justify-content: flex-end; margin-bottom: 40px;">
+    <a href="/workspaces" class="btn btn-secondary">Cancelar</a>
+    <button type="submit" class="btn btn-primary" style="padding-left: 24px; padding-right: 24px;">
+      🚀 Criar Workspace e Clonar Repositório
+    </button>
+  </div>
+</form>
+
+<script>
+  // Manipulador de upload de arquivo .env
+  function handleEnvFileUpload(event, textareaId) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const content = e.target.result;
+      const textarea = document.getElementById(textareaId);
+      if (textarea) {
+        if (textarea.value.trim()) {
+          textarea.value = textarea.value.trim() + '\n\n' + content.trim();
+        } else {
+          textarea.value = content.trim();
+        }
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // Sugestão dinâmica de porta via API
+  async function suggestPortForInput(btn) {
+    const container = btn.closest('.project-row') || btn.closest('.form-group');
+    const input = container.querySelector('.port-input') || container.querySelector('input[type="number"]');
+    if (!input) return;
+
+    btn.innerText = '⏳ Checando...';
+    try {
+      const res = await fetch('/api/ports/suggest');
+      const data = await res.json();
+      if (data.success && data.suggestedPort) {
+        input.value = data.suggestedPort;
+        btn.innerText = '✓ ' + data.suggestedPort;
+      } else {
+        btn.innerText = '✨ Sugerir';
+      }
+    } catch (e) {
+      btn.innerText = '✨ Sugerir';
+    }
+  }
+
+  function addProjectRow() {
+    const container = document.getElementById('projectRowsContainer');
+    const div = document.createElement('div');
+    div.className = 'project-row';
+    div.style = 'background: var(--bg-surface-elevated); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 12px;';
+    div.innerHTML = `
+      <div style="display: grid; grid-template-columns: 2fr 1.5fr 2fr 1fr auto; gap: 12px; align-items: flex-end;">
+        <div>
+          <label class="form-label" style="font-size: 0.8rem;">Nome do Serviço</label>
+          <input type="text" name="projectNames" class="form-control" placeholder="ex: Worker / Microserviço">
+        </div>
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label class="form-label" style="font-size: 0.8rem; margin: 0;">Porta LAN</label>
+            <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 0.7rem;" onclick="suggestPortForInput(this)">✨ Sugerir</button>
+          </div>
+          <input type="number" name="projectPorts" class="form-control port-input" placeholder="3003">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.8rem;">Comando Start</label>
+          <input type="text" name="projectStartCommands" class="form-control" placeholder="npm run worker">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.8rem;">Stack</label>
+          <select name="projectTypes" class="form-control">
+            <option value="NODEJS">Node.js</option>
+            <option value="PYTHON">Python</option>
+            <option value="GENERIC">Genérico</option>
+          </select>
+        </div>
+        <div>
+          <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.project-row').remove()">✕</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+  }
+</script>

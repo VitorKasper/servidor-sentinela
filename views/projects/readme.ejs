@@ -9,12 +9,10 @@
         <span class="status-dot"></span>
         <span class="status-text"><%= project.status %></span>
       </span>
-      <span class="badge-autosync" style="background: <%= project.projectType === 'PYTHON' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)' %>; border-color: <%= project.projectType === 'PYTHON' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(16, 185, 129, 0.4)' %>; color: <%= project.projectType === 'PYTHON' ? '#93c5fd' : '#34d399' %>;">
-        <%= project.projectType === 'PYTHON' ? '🐍 Python' : (project.projectType === 'GENERIC' ? '⚙️ Custom' : '🟢 Node.js') %>
-      </span>
+      <%- include('../partials/tech-badge', { project: project }) %>
       <% if (readmes && readmes.length > 0) { %>
         <span class="badge-readme-count">
-          📖 <%= readmes.length %> <%= readmes.length === 1 ? 'README detectado' : 'READMEs detectados' %>
+          📖 <%= readmes.length %> <%= readmes.length === 1 ? 'documento detectado' : 'documentos detectados' %>
         </span>
       <% } %>
     </div>
@@ -63,12 +61,12 @@
           <line x1="9" y1="14" x2="15" y2="14"></line>
         </svg>
       </div>
-      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Nenhum arquivo README detectado</h3>
+      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Nenhum arquivo Markdown detectado</h3>
       <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 520px; margin: 0 auto 24px;">
         <% if (readmeError) { %>
           <%= readmeError %>
         <% } else { %>
-          Este repositório ainda não possui um arquivo <code>README.md</code> ou o projeto ainda não foi clonado no servidor.
+          Este repositório ainda não possui nenhum arquivo <code>.md</code> (README, MANUAL, etc.) ou o projeto ainda não foi clonado no servidor.
         <% } %>
       </p>
       <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
@@ -195,7 +193,7 @@
           </tbody>
         </table>
         <div id="noMatchMessage" style="display: none; padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
-          Nenhum arquivo README corresponde à pesquisa digitada.
+          Nenhum arquivo corresponde à pesquisa digitada.
         </div>
       </div>
     </div>

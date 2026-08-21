@@ -16,6 +16,7 @@ const { getLocalIpAddresses, getPrimaryLocalIp } = require('./config/network');
 // Importação das rotas
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const workspaceRoutes = require('./routes/workspaceRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const processRoutes = require('./routes/processRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -84,6 +85,7 @@ app.use((req, res, next) => {
 // Registro de Rotas
 app.use('/auth', authRoutes);
 app.use('/dashboard', dashboardRoutes);
+app.use('/workspaces', workspaceRoutes);
 app.use('/projects', projectRoutes);
 app.use('/projects', processRoutes);
 app.use('/users', userRoutes);

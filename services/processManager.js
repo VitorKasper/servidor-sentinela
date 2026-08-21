@@ -2,7 +2,7 @@ const { spawn, exec } = require('child_process');
 const path = require('path');
 const treeKill = require('tree-kill');
 const gitService = require('./gitService');
-const { Project, DeploymentLog } = require('../models');
+const { Project, Workspace, DeploymentLog } = require('../models');
 
 const fs = require('fs');
 
@@ -118,13 +118,23 @@ function formatCommandWithSslBypass(command, ignoreSsl = false) {
  * Garante a criação do ambiente virtual Python (venv) isolado
  */
 async function ensurePythonVenv(project, projectDir, env, projectId, io) {
-  const isPython = project.projectType === 'PYTHON' || fs.existsSync(path.join(projectDir, 'requirements.txt'));
-  
+  const types = (project.projectType || '').split(',').map(t => t.trim().toUpperCase());
+  const isPython = types.includes('PYTHON') || fs.existsSync(path.join(projectDir, 'requirements.txt'));
+
   if (isPython) {
     const venvExists = fs.existsSync(path.join(projectDir, 'venv')) || fs.existsSync(path.join(projectDir, '.venv'));
     if (!venvExists) {
-      appendLog(projectId, `[Python venv] Criando ambiente virtual isolado ('python -m venv venv')...`, io);
-      await runCommand('python -m venv venv', projectDir, env, projectId, io);
+      // No Windows o executável costuma ser 'python'; na maioria das distros Linux/macOS é 'python3'.
+      const pythonBin = process.platform === 'win32' ? 'python' : 'python3';
+      const fallbackBin = pythonBin === 'python3' ? 'python' : 'python3';
+
+      appendLog(projectId, `[Python venv] Criando ambiente virtual isolado ('${pythonBin} -m venv venv')...`, io);
+      try {
+        await runCommand(`${pythonBin} -m venv venv`, projectDir, env, projectId, io);
+      } catch (err) {
+        appendLog(projectId, `[Python venv] '${pythonBin}' falhou, tentando '${fallbackBin}'...`, io);
+        await runCommand(`${fallbackBin} -m venv venv`, projectDir, env, projectId, io);
+      }
       appendLog(projectId, `[Python venv] Ambiente virtual criado com sucesso. Pacotes serão instalados isoladamente.`, io);
     }
   }
@@ -176,14 +186,20 @@ function runCommand(command, cwd, env, projectId, io) {
   });
 }
 
+async function findProjectWithWorkspace(projectId) {
+  return await Project.findByPk(projectId, {
+    include: [{ model: Workspace, as: 'workspace' }]
+  });
+}
+
 /**
  * Inicia a execução contínua de um projeto
  */
 async function startProject(projectId, io = null) {
-  const project = await Project.findByPk(projectId);
+  const project = await findProjectWithWorkspace(projectId);
   if (!project) throw new Error('Projeto não encontrado');
 
-  const projectDir = gitService.getProjectPath(project.slug);
+  const projectDir = gitService.getProjectPath(project);
   const entry = runningProcesses.get(projectId) || { process: null, logs: [], status: 'STOPPED' };
 
   if (entry.process && !entry.process.killed) {
@@ -268,7 +284,7 @@ async function startProject(projectId, io = null) {
  * Para a execução do projeto matando a árvore de processos
  */
 async function stopProject(projectId, io = null) {
-  const project = await Project.findByPk(projectId);
+  const project = await findProjectWithWorkspace(projectId);
   if (!project) throw new Error('Projeto não encontrado');
 
   const entry = runningProcesses.get(projectId);
@@ -324,7 +340,7 @@ async function restartProject(projectId, io = null) {
  * Realiza o Deploy completo (Clone/Pull -> Install -> Build -> Start)
  */
 async function deployProject(projectId, io = null) {
-  const project = await Project.findByPk(projectId);
+  const project = await findProjectWithWorkspace(projectId);
   if (!project) throw new Error('Projeto não encontrado');
 
   appendLog(projectId, `=====================================================`, io);
@@ -404,7 +420,7 @@ async function deployProject(projectId, io = null) {
  * Reverte o projeto para uma versão / commit anterior sob demanda
  */
 async function rollbackProject(projectId, commitHash, io = null) {
-  const project = await Project.findByPk(projectId);
+  const project = await findProjectWithWorkspace(projectId);
   if (!project) throw new Error('Projeto não encontrado');
 
   appendLog(projectId, `=====================================================`, io);
@@ -420,7 +436,7 @@ async function rollbackProject(projectId, commitHash, io = null) {
 
     // 2. Checkout do commit específico via Git
     await gitService.checkoutCommit(project, commitHash, (msg) => appendLog(projectId, msg, io));
-    const projectDir = gitService.getProjectPath(project.slug);
+    const projectDir = gitService.getProjectPath(project);
     
     // 3. Garante venv
     const initialEnv = parseEnvVars(project.envVars, project.port, projectDir, project.ignoreSsl);
@@ -478,7 +494,7 @@ async function rollbackProject(projectId, commitHash, io = null) {
  * Restaura o projeto para a versão mais recente da branch
  */
 async function restoreProjectBranch(projectId, io = null) {
-  const project = await Project.findByPk(projectId);
+  const project = await findProjectWithWorkspace(projectId);
   if (!project) throw new Error('Projeto não encontrado');
 
   appendLog(projectId, `=====================================================`, io);
@@ -492,7 +508,7 @@ async function restoreProjectBranch(projectId, io = null) {
     await stopProject(projectId, io);
 
     const latestSha = await gitService.restoreBranch(project, (msg) => appendLog(projectId, msg, io));
-    const projectDir = gitService.getProjectPath(project.slug);
+    const projectDir = gitService.getProjectPath(project);
     
     const initialEnv = parseEnvVars(project.envVars, project.port, projectDir, project.ignoreSsl);
     await ensurePythonVenv(project, projectDir, initialEnv, projectId, io);
@@ -575,5 +591,9 @@ module.exports = {
   getLogs,
   clearLogs,
   isProjectRunning,
-  appendLog
+  appendLog,
+  parseEnvVars,
+  ensurePythonVenv,
+  formatCommandWithSslBypass,
+  runCommand
 };

@@ -1,12 +1,17 @@
 const { sequelize } = require('../config/database');
 const User = require('./User');
 const Project = require('./Project');
+const Workspace = require('./Workspace');
 const DeploymentLog = require('./DeploymentLog');
 const SystemSetting = require('./SystemSetting');
 
 // Relacionamentos
 Project.hasMany(DeploymentLog, { foreignKey: 'projectId', as: 'logs', onDelete: 'CASCADE' });
 DeploymentLog.belongsTo(Project, { foreignKey: 'projectId', as: 'project' });
+
+Workspace.hasMany(Project, { foreignKey: 'workspaceId', as: 'projects', onDelete: 'CASCADE' });
+Project.belongsTo(Workspace, { foreignKey: 'workspaceId', as: 'workspace' });
+
 
 /**
  * Inicializa tabelas e insere dados padrão caso não existam
@@ -61,6 +66,7 @@ module.exports = {
   sequelize,
   User,
   Project,
+  Workspace,
   DeploymentLog,
   SystemSetting,
   syncAndSeed
