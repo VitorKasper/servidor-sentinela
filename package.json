@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "npx nodemon server.js"
+    "dev": "npx nodemon server.js",
+    "test": "node --test \"tests/*.test.js\""
   },
   "keywords": [],
   "author": "",
@@ -26,6 +27,7 @@
     "sequelize": "^6.37.8",
     "simple-git": "^3.36.0",
     "socket.io": "^4.8.3",
-    "tree-kill": "^1.2.2"
+    "tree-kill": "^1.2.2",
+    "yaml": "^2.9.1"
   }
 }

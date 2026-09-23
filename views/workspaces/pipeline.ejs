@@ -1,0 +1,107 @@
+<div class="page-header">
+  <div class="page-title-group">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <a href="/workspaces/<%= workspace.id %>" class="btn btn-secondary btn-sm">← Voltar</a>
+      <h1 style="margin: 0;">Pipeline: <%= workspace.name %></h1>
+    </div>
+    <p style="margin-top: 4px;">
+      O repositório é clonado e o setup roda <strong>uma única vez</strong> por execução. Cada terminal tem suas próprias etapas —
+      e é exatamente esse conjunto que o botão <strong>Resetar Terminal</strong> re-executa quando um terminal dá problema.
+    </p>
+  </div>
+</div>
+
+<% if (pipeline.source === 'REPO') { %>
+  <div class="card" style="margin-bottom: 20px; border-left: 3px solid var(--accent-cyan);">
+    <div class="card-body">
+      <strong>Definido pelo repositório.</strong>
+      Este workspace é governado pelo arquivo <code><%= pipeline.fileName %></code> versionado no repositório, que tem precedência
+      sobre qualquer edição feita aqui. Para alterar o pipeline, edite esse arquivo e rode um deploy.
+    </div>
+  </div>
+<% } %>
+
+<% if (pipeline.error) { %>
+  <div class="card" style="margin-bottom: 20px; border-left: 3px solid var(--accent-red, #e5484d);">
+    <div class="card-body">
+      <strong>Pipeline inválido.</strong> O deploy será abortado enquanto este erro existir:
+      <div style="font-family: var(--font-mono); font-size: 0.85rem; margin-top: 8px;"><%= pipeline.error %></div>
+    </div>
+  </div>
+<% } %>
+
+<% if (!pipeline.yaml && !pipeline.error) { %>
+  <div class="card" style="margin-bottom: 20px;">
+    <div class="card-body">
+      Este workspace ainda não tem pipeline. Monte um abaixo, ou rode um deploy — o Sentinela gera um automaticamente
+      a partir dos comandos e terminais que já existem hoje.
+    </div>
+  </div>
+<% } %>
+
+<div id="pipelineEditor" style="max-width: 980px;">
+  <!-- Setup compartilhado -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div class="card-title">Setup compartilhado</div>
+        <div style="font-size: 0.82rem; color: var(--text-muted);">Roda uma vez por deploy, na raiz do workspace, antes de qualquer terminal subir.</div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" data-add-setup>+ Etapa</button>
+    </div>
+    <div class="card-body">
+      <div id="setupSteps"></div>
+      <div id="setupVazio" style="color: var(--text-muted); font-size: 0.88rem;">Nenhuma etapa de setup.</div>
+    </div>
+  </div>
+
+  <!-- Terminais -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div class="card-title">Terminais</div>
+        <div style="font-size: 0.82rem; color: var(--text-muted);">Cada terminal é um processo com logs próprios e reset independente.</div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" data-add-terminal>+ Terminal</button>
+    </div>
+    <div class="card-body">
+      <div id="terminalsList"></div>
+      <div id="terminaisVazio" style="color: var(--text-muted); font-size: 0.88rem;">Nenhum terminal declarado.</div>
+    </div>
+  </div>
+
+  <!-- YAML -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="card-title">YAML equivalente</div>
+      <button type="button" class="btn btn-secondary btn-sm" data-toggle-yaml>Editar como YAML</button>
+    </div>
+    <div class="card-body">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0;">
+        Este é o mesmo formato do <code>sentinela.yml</code>. Copie para a raiz do repositório para versionar o pipeline junto com o código.
+      </p>
+      <textarea id="yamlBox" class="form-control" rows="16" readonly
+                style="font-family: var(--font-mono); font-size: 0.82rem;"><%= pipeline.yaml %></textarea>
+    </div>
+  </div>
+
+  <div id="pipelineMsg" style="margin-bottom: 12px;"></div>
+
+  <% if (!pipeline.readOnly) { %>
+    <div style="display: flex; gap: 10px;">
+      <button type="button" class="btn btn-primary" id="btnSalvarPipeline">Salvar Pipeline</button>
+      <form action="/workspaces/<%= workspace.id %>/deploy-all" method="POST" style="display: inline;">
+        <button type="submit" class="btn btn-secondary">Salvar depois e Rodar Deploy</button>
+      </form>
+    </div>
+  <% } %>
+</div>
+
+<script>
+  window.PIPELINE_STATE = {
+    workspaceId: <%= workspace.id %>,
+    readOnly: <%= pipeline.readOnly ? 'true' : 'false' %>,
+    definition: <%- JSON.stringify(pipeline.def || { version: 1, setup: [], terminals: [] }) %>
+  };
+</script>
+<script src="/js/pipeline-editor.js"></script>

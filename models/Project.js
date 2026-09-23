@@ -68,7 +68,7 @@ const Project = sequelize.define('Project', {
     allowNull: true
   },
   status: {
-    type: DataTypes.ENUM('STOPPED', 'STARTING', 'RUNNING', 'BUILDING', 'ERROR'),
+    type: DataTypes.ENUM('STOPPED', 'STARTING', 'RUNNING', 'BUILDING', 'ERROR', 'ORPHANED'),
     defaultValue: 'STOPPED'
   },
   pid: {
@@ -109,6 +109,16 @@ const Project = sequelize.define('Project', {
   lastDeployedAt: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  pipelineKey: {
+    type: DataTypes.STRING(80),
+    allowNull: true,
+    comment: 'Chave estavel do terminal no pipeline do Workspace. Nulo para projetos avulsos'
+  },
+  pipelineSteps: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'JSON das etapas proprias deste terminal, reexecutadas no reset individual'
   }
 }, {
   tableName: 'projects'

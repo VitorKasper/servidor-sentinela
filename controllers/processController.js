@@ -1,4 +1,4 @@
-const { Project, DeploymentLog } = require('../models');
+const { Project, DeploymentLog, Workspace } = require('../models');
 const processManager = require('../services/processManager');
 const gitService = require('../services/gitService');
 const readmeService = require('../services/readmeService');
@@ -10,7 +10,10 @@ const { getPrimaryLocalIp } = require('../config/network');
 exports.showTerminal = async (req, res) => {
   try {
     const project = await Project.findByPk(req.params.id, {
-      include: [{ model: DeploymentLog, as: 'logs', limit: 10, order: [['createdAt', 'DESC']] }]
+      include: [
+        { model: DeploymentLog, as: 'logs', limit: 10, order: [['createdAt', 'DESC']] },
+        { model: Workspace, as: 'workspace' }
+      ]
     });
 
     if (!project) {
@@ -20,7 +23,7 @@ exports.showTerminal = async (req, res) => {
 
     const logs = processManager.getLogs(project.id);
     const primaryIp = getPrimaryLocalIp();
-    const commits = await gitService.getCommitHistory(project.slug, 15);
+    const commits = await gitService.getCommitHistory(project, 15);
     const readmes = readmeService.findProjectReadmes(project.slug);
 
     res.render('projects/terminal', {
@@ -113,7 +116,7 @@ exports.getCommits = async (req, res) => {
     const project = await Project.findByPk(req.params.id);
     if (!project) return res.status(404).json({ success: false, error: 'Projeto não encontrado' });
 
-    const commits = await gitService.getCommitHistory(project.slug, 15);
+    const commits = await gitService.getCommitHistory(project, 15);
     return res.json({ success: true, commits, currentCommit: project.currentCommitHash });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });

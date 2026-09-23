@@ -14,6 +14,13 @@ const runningProcesses = new Map();
  * Utilitário para formatar e adicionar log ao buffer e emitir via Socket.IO
  */
 function appendLog(projectId, text, io = null) {
+  // Etapas compartilhadas do pipeline (git pull, setup) precisam aparecer em
+  // todos os terminais do workspace, não só no primeiro.
+  if (Array.isArray(projectId)) {
+    projectId.forEach(id => appendLog(id, text, io));
+    return;
+  }
+
   if (!runningProcesses.has(projectId)) {
     runningProcesses.set(projectId, { process: null, logs: [], status: 'STOPPED' });
   }
@@ -342,6 +349,15 @@ async function restartProject(projectId, io = null) {
 async function deployProject(projectId, io = null) {
   const project = await findProjectWithWorkspace(projectId);
   if (!project) throw new Error('Projeto não encontrado');
+
+  // Projetos de um Workspace compartilham a mesma pasta clonada. Rodar clone/pull e
+  // install por projeto repetiria o mesmo trabalho e faria duas instalações
+  // concorrerem no mesmo diretório — quem manda nesses é o pipeline, que reseta
+  // apenas as etapas próprias deste terminal.
+  if (project.workspaceId) {
+    const pipelineRunner = require('./pipelineRunner');
+    return await pipelineRunner.resetTerminal(projectId, io);
+  }
 
   appendLog(projectId, `=====================================================`, io);
   appendLog(projectId, `[Deploy] Iniciando processo de deploy para '${project.name}'...`, io);

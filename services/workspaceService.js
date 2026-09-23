@@ -1,9 +1,8 @@
 const { Workspace, Project } = require('../models');
 const gitService = require('./gitService');
 const processManager = require('./processManager');
-
-// Mutex em memória para evitar instalações/builds concorrentes na mesma pasta de Workspace
-const workspaceInstallLocks = new Map();
+const pipelineRunner = require('./pipelineRunner');
+const pipelineService = require('./pipelineService');
 
 /**
  * Utilitário para gerar slug amigável
@@ -42,64 +41,6 @@ async function getWorkspaceById(id) {
     }],
     order: [[{ model: Project, as: 'projects' }, 'createdAt', 'ASC']]
   });
-}
-
-/**
- * Executa a instalação e build do Workspace de forma thread-safe (uma única vez por pasta)
- */
-async function runWorkspaceInstallAndBuild(workspace, io = null) {
-  const workspaceId = workspace.id;
-
-  // Se já houver uma instalação rodando para este workspace, aguarda terminar
-  if (workspaceInstallLocks.has(workspaceId)) {
-    console.log(`[WorkspaceLock] Aguardando conclusão da instalação anterior do Workspace #${workspaceId}...`);
-    await workspaceInstallLocks.get(workspaceId);
-    return;
-  }
-
-  const installPromise = (async () => {
-    try {
-      workspace.isWorkspace = true;
-      const gitResult = await gitService.cloneOrPull(workspace, (msg) => {
-        if (workspace.projects && workspace.projects.length > 0) {
-          processManager.appendLog(workspace.projects[0].id, msg, io);
-        }
-      });
-      const workspaceDir = gitResult.path;
-
-      // Executa comando de instalação do workspace uma única vez
-      if (workspace.installCommand && workspace.installCommand.trim()) {
-        console.log(`[Workspace] Executando comando de instalação único ('${workspace.installCommand}')...`);
-        const env = processManager.parseEnvVars(workspace.envVars, null, workspaceDir, workspace.ignoreSsl);
-        await processManager.ensurePythonVenv(workspace, workspaceDir, env, `ws-${workspace.id}`, io);
-        const finalEnv = processManager.parseEnvVars(workspace.envVars, null, workspaceDir, workspace.ignoreSsl);
-        const installCmd = processManager.formatCommandWithSslBypass(workspace.installCommand.trim(), workspace.ignoreSsl);
-
-        const logTargetId = (workspace.projects && workspace.projects.length > 0) ? workspace.projects[0].id : `ws-${workspace.id}`;
-        await processManager.runCommand(installCmd, workspaceDir, finalEnv, logTargetId, io);
-      }
-
-      // Executa comando de build do workspace se configurado
-      if (workspace.buildCommand && workspace.buildCommand.trim()) {
-        console.log(`[Workspace] Executando comando de build único ('${workspace.buildCommand}')...`);
-        const env = processManager.parseEnvVars(workspace.envVars, null, workspaceDir, workspace.ignoreSsl);
-        const logTargetId = (workspace.projects && workspace.projects.length > 0) ? workspace.projects[0].id : `ws-${workspace.id}`;
-        await processManager.runCommand(workspace.buildCommand.trim(), workspaceDir, env, logTargetId, io);
-      }
-
-      if (gitResult && gitResult.commitHash) {
-        workspace.currentCommitHash = gitResult.commitHash;
-        workspace.lastCommitHash = gitResult.commitHash;
-        workspace.lastDeployedAt = new Date();
-        await workspace.save();
-      }
-    } finally {
-      workspaceInstallLocks.delete(workspaceId);
-    }
-  })();
-
-  workspaceInstallLocks.set(workspaceId, installPromise);
-  await installPromise;
 }
 
 /**
@@ -183,6 +124,16 @@ async function addProjectToWorkspace(workspaceId, projData) {
   const workspace = await Workspace.findByPk(workspaceId);
   if (!workspace) throw new Error('Workspace não encontrado');
 
+  // O pipeline é a autoridade sobre quais terminais existem. Um projeto criado por
+  // fora dele seria marcado como órfão no próximo deploy, então o terminal é
+  // registrado na definição antes de o Project ser criado.
+  const efetiva = await pipelineRunner.getEffectiveDefinition(workspaceId);
+  if (efetiva.source === 'REPO') {
+    throw new Error(`Este workspace é governado pelo '${efetiva.fileName}' versionado no repositório. Adicione o novo terminal nesse arquivo e rode o deploy.`);
+  }
+
+  const pipelineKey = await registerTerminalInUiPipeline(workspace, efetiva, projData);
+
   let projBaseSlug = slugify(`${workspace.name}-${projData.name}`);
   let projSlug = projBaseSlug;
   let c = 1;
@@ -193,14 +144,14 @@ async function addProjectToWorkspace(workspaceId, projData) {
 
   const project = await Project.create({
     workspaceId: workspace.id,
+    pipelineKey,
+    pipelineSteps: JSON.stringify([]),
     name: projData.name.trim(),
     slug: projSlug,
     projectType: projData.projectType || 'NODEJS',
     repoUrl: workspace.repoUrl,
     branch: workspace.branch,
     gitToken: workspace.gitToken,
-    installCommand: workspace.installCommand,
-    buildCommand: workspace.buildCommand,
     startCommand: projData.startCommand.trim(),
     envVars: projData.envVars ? projData.envVars.trim() : workspace.envVars,
     port: projData.port ? parseInt(projData.port, 10) : null,
@@ -211,6 +162,46 @@ async function addProjectToWorkspace(workspaceId, projData) {
   });
 
   return project;
+}
+
+/**
+ * Acrescenta um terminal à definição de pipeline mantida pela interface e devolve sua chave.
+ * Se o workspace ainda não tem pipeline, sintetiza um a partir do estado atual antes.
+ */
+async function registerTerminalInUiPipeline(workspace, efetiva, projData) {
+  let def = efetiva.def;
+
+  if (!def) {
+    if (efetiva.error) {
+      throw new Error(`O pipeline atual deste workspace é inválido e precisa ser corrigido antes de adicionar terminais: ${efetiva.error}`);
+    }
+    const existentes = await Project.findAll({ where: { workspaceId: workspace.id } });
+    def = existentes.length > 0
+      ? pipelineService.synthesizeFromLegacy(workspace, existentes.map(p => p.toJSON()))
+      : { version: pipelineService.SUPPORTED_VERSION, setup: [], terminals: [] };
+  }
+
+  const baseKey = slugify(projData.name) || 'terminal';
+  let key = baseKey;
+  let contador = 1;
+  while (def.terminals.some(t => t.key === key)) {
+    key = `${baseKey}-${contador}`;
+    contador++;
+  }
+
+  def.terminals.push({
+    key,
+    name: projData.name.trim(),
+    port: projData.port ? parseInt(projData.port, 10) : null,
+    type: (projData.projectType || 'NODEJS').split(',')[0].trim().toUpperCase(),
+    cwd: null,
+    steps: [],
+    start: projData.startCommand.trim(),
+    env: (projData.envVars && projData.envVars.trim()) ? projData.envVars.trim() : null
+  });
+
+  await pipelineRunner.saveUiDefinition(workspace.id, def);
+  return key;
 }
 
 /**
@@ -255,53 +246,8 @@ async function stopAllProjectsInWorkspace(workspaceId, io = null) {
  * Re-Deploy em lote de todo o Workspace (executa de forma assíncrona com emissão de status em tempo real via Socket.IO)
  */
 async function deployWorkspace(workspaceId, io = null) {
-  const workspace = await getWorkspaceById(workspaceId);
-  if (!workspace) throw new Error('Workspace não encontrado');
-
-  console.log(`[Workspace Deploy] Iniciando deploy assíncrono do Workspace '${workspace.name}'...`);
-
-  // 1. Atualiza status dos projetos do workspace para BUILDING no banco e emite Socket.IO
-  if (workspace.projects && workspace.projects.length > 0) {
-    for (const proj of workspace.projects) {
-      proj.status = 'BUILDING';
-      await proj.save();
-      if (io) {
-        io.emit('project_status', { projectId: proj.id, status: 'BUILDING', pid: null });
-      }
-    }
-  }
-
-  try {
-    // 2. Para todos os processos anteriores em execução
-    await stopAllProjectsInWorkspace(workspaceId, io);
-
-    // 3. Executa git pull, npm/pip install e build uma única vez para a pasta do Workspace
-    await runWorkspaceInstallAndBuild(workspace, io);
-
-    // 4. Inicia todos os projetos do workspace em seguida
-    const results = [];
-    for (const proj of workspace.projects) {
-      try {
-        const res = await processManager.startProject(proj.id, io);
-        results.push({ projectId: proj.id, name: proj.name, ...res });
-      } catch (err) {
-        results.push({ projectId: proj.id, name: proj.name, success: false, error: err.message });
-      }
-    }
-    return results;
-  } catch (error) {
-    console.error(`[Workspace Deploy Erro] Workspace #${workspaceId}:`, error.message);
-    if (workspace.projects && workspace.projects.length > 0) {
-      for (const proj of workspace.projects) {
-        proj.status = 'ERROR';
-        await proj.save();
-        if (io) {
-          io.emit('project_status', { projectId: proj.id, status: 'ERROR', pid: null });
-        }
-      }
-    }
-    throw error;
-  }
+  console.log(`[Workspace Deploy] Delegando execução do Workspace #${workspaceId} para o pipeline...`);
+  return await pipelineRunner.runPipeline(workspaceId, io);
 }
 
 module.exports = {
@@ -312,6 +258,5 @@ module.exports = {
   addProjectToWorkspace,
   startAllProjectsInWorkspace,
   stopAllProjectsInWorkspace,
-  deployWorkspace,
-  runWorkspaceInstallAndBuild
+  deployWorkspace
 };

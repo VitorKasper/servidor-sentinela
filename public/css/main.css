@@ -853,10 +853,21 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+/* Terminal que saiu da definição do pipeline: parado e preservado, nunca excluído */
+.status-pill.status-ORPHANED {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
 .status-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
+}
+
+.status-ORPHANED .status-dot {
+  background-color: #c084fc;
 }
 
 .status-RUNNING .status-dot {

@@ -123,3 +123,66 @@ O servidor se conecta em `0.0.0.0`, permitindo que qualquer dispositivo na mesma
 http://<IP_DO_SERVIDOR>:3000
 ```
 *(O IP exato da sua máquina é exibido automaticamente no console do terminal e no topo do painel web).*
+
+---
+
+## Pipeline de Workspace
+
+Um Workspace tem **um clone e um setup**, compartilhados por todos os seus terminais. Quem descreve isso é o pipeline.
+
+Cada execução segue sempre a mesma ordem:
+
+```
+git pull  →  reconciliação dos terminais  →  setup (uma única vez)  →  por terminal: etapas próprias + start
+```
+
+### Onde o pipeline mora
+
+O arquivo `sentinela.yml` na raiz do repositório clonado é a autoridade. Sem ele, vale a definição montada em
+**Workspace → Pipeline**, na interface. Se não houver nenhuma das duas, o Sentinela gera uma a partir dos comandos e
+terminais já cadastrados no workspace e a salva — nada quebra em workspaces antigos.
+
+### Formato
+
+```yaml
+version: 1
+
+setup:                          # roda UMA vez por execução, sob lock, na raiz do workspace
+  - name: deps
+    run: npm install
+  - name: shared
+    run: npm run build:shared
+
+terminals:
+  - key: api                    # identificador estável — sobrevive a renomeações
+    name: API
+    port: 3000
+    type: NODEJS
+    steps:                      # etapas próprias — é o que o reset individual re-executa
+      - name: build
+        run: npm run build:api
+    start: npm run start:api    # comando que mantém o processo vivo
+    env: |
+      LOG_LEVEL=debug
+
+  - key: worker
+    name: Worker
+    start: npm run worker
+```
+
+`cwd` é aceito em qualquer etapa e em qualquer terminal, como caminho relativo à raiz do workspace (útil em monorepos).
+O `git pull` não é declarável: ele é implícito e sempre roda antes do setup, já que é ele quem traz o próprio
+`sentinela.yml`.
+
+### Reset de um terminal
+
+Quando um terminal dá problema, **Resetar Terminal** mata só aquele processo e re-executa só as `steps` dele,
+reaproveitando o pull e o setup que já foram feitos. Os outros terminais não são tocados. Se houver um deploy do
+workspace em andamento, o reset é recusado com mensagem explícita — a pasta é compartilhada e duas instalações
+simultâneas se corromperiam.
+
+### Terminais órfãos
+
+Se uma `key` some da definição, o processo é parado e o terminal fica com status `ORPHANED`. Nada é excluído:
+um erro de digitação no YAML não pode apagar histórico de deploy e logs. A remoção definitiva é sempre manual.
+

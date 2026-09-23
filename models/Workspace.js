@@ -76,6 +76,16 @@ const Workspace = sequelize.define('Workspace', {
   lastDeployedAt: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  pipelineDefinition: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Pipeline em YAML cadastrado pela UI. Usado quando o repositorio nao traz sentinela.yml'
+  },
+  pipelineSource: {
+    type: DataTypes.ENUM('REPO', 'UI'),
+    defaultValue: 'UI',
+    comment: 'Origem observada do pipeline na ultima execucao (gravado pelo executor, nao e configuracao)'
   }
 }, {
   tableName: 'workspaces'

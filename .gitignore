@@ -13,9 +13,11 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 
-# Diretório de Armazenamento de Projetos Clonados
-storage/projects/*
+# Diretório de Armazenamento de Projetos e Workspaces Clonados
+storage/projects/
 !storage/projects/.gitkeep
+storage/workspaces/
+!storage/workspaces/.gitkeep
 
 # Diretório de Uploads e Arquivos de Usuários
 public/uploads/*
